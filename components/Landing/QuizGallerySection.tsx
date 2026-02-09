@@ -3,6 +3,7 @@ import { RefreshCw, Database, TrendingUp, Play, Ghost } from 'lucide-react';
 import NeoCard from '../ui/NeoCard';
 import NeoButton from '../ui/NeoButton';
 import { useApp } from '../../contexts/AppContext';
+import { useToast } from '../../contexts/ToastContext';
 import { seedDatabase } from '../../services/storageService';
 import { AppState } from '../../types';
 
@@ -138,9 +139,20 @@ const RefreshButton: React.FC = () => {
 };
 
 const SeedButton: React.FC = () => {
+  const { addToast } = useToast();
+  
+  const handleSeed = async () => {
+    try {
+      await seedDatabase();
+      addToast("Database seeded successfully with demo quizzes!", 'success');
+    } catch (error: any) {
+      addToast(error.message || "Failed to seed database", 'error');
+    }
+  };
+  
   return (
     <button 
-      onClick={() => seedDatabase()} 
+      onClick={handleSeed} 
       className="p-1 hover:bg-black hover:text-white rounded transition-colors" 
       title="Seed Demo Data"
       aria-label="Seed demo data"

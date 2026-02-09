@@ -1,6 +1,10 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+
+// Ensure Component is properly imported from React
+const ReactComponent = Component as any;
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import NeoButton from '../components/ui/NeoButton';
+import NeoButton from './ui/NeoButton';
+import NeoCard from './ui/NeoCard';
 
 interface Props {
   children: ReactNode;
@@ -13,7 +17,9 @@ interface State {
   errorInfo?: ErrorInfo;
 }
 
-class ErrorBoundary extends Component<Props, State> {
+class ErrorBoundary extends ReactComponent<Props, State> {
+  public state: State;
+
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false };
@@ -37,7 +43,7 @@ class ErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: undefined, errorInfo: undefined });
   };
 
-  render() {
+  public render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
         return this.props.fallback;

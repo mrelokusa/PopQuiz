@@ -76,9 +76,6 @@ export const saveQuiz = async (quiz: Quiz): Promise<boolean> => {
   } catch (e: any) {
     console.error("Save error details:", e);
     
-    // Import toast dynamically to avoid circular dependencies
-    const { useToast } = await import('../contexts/ToastContext');
-    
     let errorMessage = "Unknown error occurred";
     
     // Robust error message extraction
@@ -96,15 +93,8 @@ export const saveQuiz = async (quiz: Quiz): Promise<boolean> => {
         }
     }
 
-    // Create a temporary toast container for this error
-    const toastDiv = document.createElement('div');
-    toastDiv.className = 'fixed top-4 right-4 z-50 bg-neo-coral text-white border-2 border-black px-4 py-3 rounded-lg shadow-neo-md font-bold text-sm max-w-[400px]';
-    toastDiv.textContent = `Save failed: ${errorMessage}`;
-    document.body.appendChild(toastDiv);
-    
-    setTimeout(() => {
-        document.body.removeChild(toastDiv);
-    }, 5000);
+    // Simple error fallback for now - will be handled by calling component
+    console.error(`Save failed: ${errorMessage}`);
     return false;
   }
 };
@@ -242,20 +232,10 @@ export const seedDatabase = async (): Promise<void> => {
 
     if (error) {
         console.error("Seed error:", error);
-        const toastDiv = document.createElement('div');
-        toastDiv.className = 'fixed top-4 right-4 z-50 bg-neo-coral text-white border-2 border-black px-4 py-3 rounded-lg shadow-neo-md font-bold text-sm max-w-[400px]';
-        toastDiv.textContent = "Seed failed: " + error.message;
-        document.body.appendChild(toastDiv);
-        setTimeout(() => document.body.removeChild(toastDiv), 5000);
+        throw new Error("Seed failed: " + error.message);
     } else {
-        const toastDiv = document.createElement('div');
-        toastDiv.className = 'fixed top-4 right-4 z-50 bg-neo-mint text-black border-2 border-black px-4 py-3 rounded-lg shadow-neo-md font-bold text-sm max-w-[400px]';
-        toastDiv.textContent = `Database seeded successfully with ${quizzesToInsert.length} viral quizzes!`;
-        document.body.appendChild(toastDiv);
-        setTimeout(() => {
-            document.body.removeChild(toastDiv);
-            window.location.reload();
-        }, 2000);
+        console.log(`Database seeded successfully with ${quizzesToInsert.length} viral quizzes!`);
+        window.location.reload();
     }
   } catch (e) {
       console.error("Seed exception", e);

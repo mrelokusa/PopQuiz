@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { AppState, Quiz, AuthUser, LoadingState } from '../types';
 import { getCurrentUser, ensureUserProfile, signOut } from '../services/authService';
-import { getQuizzes } from '../services/storageService';
+import { getQuizzes, getQuizById } from '../services/storageService';
 import { supabase } from '../lib/supabaseClient';
 
 // App state interface
@@ -134,13 +134,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         const params = new URLSearchParams(window.location.search);
         const quizId = params.get('quiz');
         if (quizId) {
-          // Load specific quiz
-          const { getQuizById } = await import('../services/storageService');
-          const quiz = await getQuizById(quizId);
-          if (quiz) {
-            setActiveQuiz(quiz);
-            setView(AppState.PLAY);
-          }
+        // Load specific quiz
+        const quiz = await getQuizById(quizId);
+        if (quiz) {
+          setActiveQuiz(quiz);
+          setView(AppState.PLAY);
+        }
         }
       } catch (error) {
         console.error('App initialization failed:', error);
