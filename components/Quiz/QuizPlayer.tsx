@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Quiz, Outcome } from '../../types';
 import { saveResult, getQuizOutcomeStats } from '../../services/storageService';
 import { getCurrentUser } from '../../services/authService';
+import { useToast } from '../../contexts/ToastContext';
 import NeoButton from '../ui/NeoButton';
 import NeoCard from '../ui/NeoCard';
 import { RefreshCw, Share2, TrendingUp, Sparkles, AlertCircle } from 'lucide-react';
@@ -12,6 +13,7 @@ interface QuizPlayerProps {
 }
 
 const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onExit }) => {
+  const { addToast } = useToast();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [scores, setScores] = useState<Record<string, number>>({});
   const [finished, setFinished] = useState(false);
@@ -102,16 +104,39 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onExit }) => {
     });
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
       // Create deep link
       const url = `${window.location.origin}?quiz=${quiz.id}`;
       
-      navigator.clipboard.writeText(url).then(() => {
-          alert(`Link copied! Send this to your friends:\n\n${url}`);
-      }).catch(() => {
-          // Fallback for weird browser permissions
-          prompt("Copy this link to share:", url);
-      });
+      try {
+          await navigator.clipboard.writeText(url);
+          addToast(`Quiz link copied! Share it with friends: ${url}`, 'success');
+      } catch (error) {
+          // Fallback for browsers that don't support clipboard API
+          try {
+              // Modern fallback
+              const textArea = document.createElement('textarea');
+              textArea.value = url;
+              textArea.style.position = 'fixed';
+              textArea.style.left = '-999999px';
+              textArea.style.top = '-999999px';
+              document.body.appendChild(textArea);
+              textArea.focus();
+              textArea.select();
+              
+              const successful = document.execCommand('copy');
+              document.body.removeChild(textArea);
+              
+              if (successful) {
+                  addToast(`Quiz link copied! Share it with friends: ${url}`, 'success');
+              } else {
+                  throw new Error('Copy command failed');
+              }
+          } catch (fallbackError) {
+              // Final fallback - show the link in a toast
+              addToast(`Share this quiz link: ${url}`, 'info', 10000);
+          }
+      }
   };
 
   // --- Result View ---

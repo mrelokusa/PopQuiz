@@ -18,6 +18,12 @@ export interface Question {
   answers: Answer[];
 }
 
+export enum QuizVisibility {
+  PUBLIC = 'public',
+  PRIVATE = 'private',
+  UNLISTED = 'unlisted'
+}
+
 export interface Quiz {
   id: string;
   title: string;
@@ -28,6 +34,7 @@ export interface Quiz {
   user_id?: string; // Supabase Auth ID
   createdAt: number;
   plays: number;
+  visibility?: QuizVisibility; // NEW: Privacy setting
 }
 
 export interface UserProfile {

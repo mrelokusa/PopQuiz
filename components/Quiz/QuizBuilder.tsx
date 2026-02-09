@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Sparkles, Plus, Trash, ArrowRight, Save, Check, AlertTriangle, X } from 'lucide-react';
+import { Sparkles, Plus, Trash, ArrowRight, Save, Check, AlertTriangle, X, Globe, Lock, Link } from 'lucide-react';
 import NeoCard from '../ui/NeoCard';
 import NeoButton from '../ui/NeoButton';
-import { Quiz, Question, Outcome } from '../../types';
+import { Quiz, Question, Outcome, QuizVisibility } from '../../types';
 import { generateAIQuiz } from '../../services/geminiService';
 import { saveQuiz } from '../../services/storageService';
 import { getCurrentUser } from '../../services/authService';
@@ -24,7 +24,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onComplete }) => {
     title: '',
     description: '',
     questions: [],
-    outcomes: []
+    outcomes: [],
+    visibility: QuizVisibility.PUBLIC
   });
 
   const handleGenerate = async () => {
@@ -92,6 +93,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onComplete }) => {
         user_id: user.id,
         createdAt: Date.now(),
         plays: 0,
+        visibility: quizData.visibility || QuizVisibility.PUBLIC,
         title: quizData.title,
         description: quizData.description || '',
         questions: quizData.questions,
@@ -240,10 +242,73 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onComplete }) => {
                             </div>
                         ))}
                      </div>
-                </NeoCard>
-            </div>
+                 </NeoCard>
 
-            {/* Questions */}
+                 {/* Privacy Settings */}
+                 <NeoCard className="p-4" noShadow>
+                     <h3 className="font-black uppercase text-sm mb-4 border-b-2 border-black pb-2 flex items-center gap-2">
+                         <Globe className="w-4 h-4" />
+                         Privacy Settings
+                     </h3>
+                     <div className="space-y-2">
+                         {[
+                             {
+                                 value: QuizVisibility.PUBLIC,
+                                 label: 'Public',
+                                 desc: 'Anyone can find and play this quiz',
+                                 icon: Globe,
+                                 color: 'bg-neo-mint'
+                             },
+                             {
+                                 value: QuizVisibility.UNLISTED,
+                                 label: 'Unlisted', 
+                                 desc: 'Only people with the link can play',
+                                 icon: Link,
+                                 color: 'bg-neo-lemon'
+                             },
+                             {
+                                 value: QuizVisibility.PRIVATE,
+                                 label: 'Private',
+                                 desc: 'Only you can see and play this quiz',
+                                 icon: Lock,
+                                 color: 'bg-neo-coral'
+                             }
+                         ].map((option) => {
+                             const Icon = option.icon;
+                             const isSelected = quizData.visibility === option.value;
+                             
+                             return (
+                                 <button
+                                     key={option.value}
+                                     onClick={() => setQuizData(prev => ({ ...prev, visibility: option.value }))}
+                                     className={`
+                                         w-full p-3 rounded-lg border-2 transition-all flex items-center gap-3
+                                         ${isSelected ? 'border-black shadow-neo-sm' : 'border-gray-300 hover:border-gray-500'}
+                                     `}
+                                 >
+                                     <div className={`
+                                         w-8 h-8 rounded-full border-2 border-black flex items-center justify-center flex-shrink-0
+                                         ${isSelected ? option.color + ' text-black' : 'bg-gray-200'}
+                                     `}>
+                                         <Icon className="w-4 h-4" />
+                                     </div>
+                                     <div className="text-left">
+                                         <div className="font-bold text-sm">{option.label}</div>
+                                         <div className="text-xs text-gray-600">{option.desc}</div>
+                                     </div>
+                                     {isSelected && (
+                                         <div className="w-5 h-5 bg-black rounded-full flex items-center justify-center ml-auto">
+                                             <div className="w-2 h-2 bg-white rounded-full"></div>
+                                         </div>
+                                     )}
+                                 </button>
+                             );
+                         })}
+                     </div>
+                 </NeoCard>
+             </div>
+
+             {/* Questions */}
             <div className="space-y-4">
                  <h3 className="font-black uppercase text-sm bg-black text-white inline-block px-2 py-1 transform -rotate-1">Questions ({quizData.questions?.length})</h3>
                  {quizData.questions?.map((q, qIdx) => (

@@ -1,0 +1,8 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="192" height="192" rx="48" fill="#FFEAA7" stroke="#000" stroke-width="4"/>
+  <path d="M48 72C48 64.268 54.268 58 62 58H130C137.732 58 144 64.268 144 72V120C144 127.732 137.732 134 130 134H62C54.268 134 48 127.732 48 120V72Z" fill="#FF7675" stroke="#000" stroke-width="3"/>
+  <circle cx="78" cy="96" r="9" fill="#000"/>
+  <circle cx="114" cy="96" r="9" fill="#000"/>
+  <path d="M66 114C66 114 78 126 96 126C114 126 126 114 126 114" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+  <text x="96" y="48" font-family="serif" font-size="24" font-weight="900" font-style="italic" text-anchor="middle" fill="#000">PopQuiz</text>
+</svg>

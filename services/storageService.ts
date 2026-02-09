@@ -1,5 +1,6 @@
 import { Quiz, QuizResult } from "../types";
 import { supabase } from "../lib/supabaseClient";
+import { getCurrentUser } from "./authService";
 import { MOCK_QUIZ } from "../constants";
 import { SEED_DATA } from "../data/seedData";
 
@@ -27,9 +28,12 @@ export const getQuizzes = async (scope: 'global' | 'local', userId?: string): Pr
       .select('*')
       .order('created_at', { ascending: false });
 
-    // If Local scope, only show quizzes created by the user
+    // If Local scope, only show quizzes created by the user (including private ones)
     if (scope === 'local' && userId) {
       query = query.eq('user_id', userId);
+    } else {
+      // Global scope: only show public quizzes
+      query = query.eq('visibility', 'public');
     }
 
     const { data, error } = await query;
@@ -63,6 +67,7 @@ export const saveQuiz = async (quiz: Quiz): Promise<boolean> => {
         author: quiz.author,
         user_id: quiz.user_id || null, 
         plays: quiz.plays || 0,
+        visibility: quiz.visibility || 'public', // Default to public
         // Ensure created_at is a number (bigint in DB)
         created_at: typeof quiz.createdAt === 'number' ? quiz.createdAt : Date.now()
     };
@@ -111,10 +116,18 @@ export const getQuizById = async (id: string): Promise<Quiz | undefined> => {
 
     if (error || !data) return undefined;
 
-    return {
+    const quiz = {
       ...data,
       createdAt: parseCreatedAt(data.created_at)
     };
+
+    // Check visibility for private/unlisted quizzes
+    const user = await getCurrentUser();
+    if (quiz.visibility === 'private' && quiz.user_id !== user?.id) {
+      return undefined; // Don't return private quizzes to other users
+    }
+
+    return quiz;
   } catch (e) {
     return undefined;
   }
