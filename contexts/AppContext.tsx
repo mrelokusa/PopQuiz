@@ -128,14 +128,18 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // Initialize auth and deep links
   useEffect(() => {
+    let cancelled = false;
+
     const initializeApp = async () => {
       setLoading({ isLoading: true, message: 'Initializing...' });
-      
+
       try {
-        // Check auth
         const user = await getCurrentUser();
+        if (cancelled) return;
+
         if (user) {
           await ensureUserProfile(user);
+          if (cancelled) return;
           setUser(user);
         }
 
@@ -143,17 +147,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         const params = new URLSearchParams(window.location.search);
         const quizId = params.get('quiz');
         if (quizId) {
-        // Load specific quiz
-        const quiz = await getQuizById(quizId);
-        if (quiz) {
-          setActiveQuiz(quiz);
-          setView(AppState.PLAY);
+          const quiz = await getQuizById(quizId);
+          if (cancelled) return;
+          if (quiz) {
+            setActiveQuiz(quiz);
+            setView(AppState.PLAY);
+          }
         }
-        }
-      } catch (error) {
-        console.error('App initialization failed:', error);
+      } catch (error: any) {
+        if (!cancelled) console.error('App initialization failed:', error);
       } finally {
-        setLoading({ isLoading: false });
+        if (!cancelled) setLoading({ isLoading: false });
       }
     };
 
@@ -161,15 +165,16 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
     // Auth listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (cancelled) return;
       const user = session?.user || null;
       setUser(user);
-      
-      if (user) {
-        await ensureUserProfile(user);
-      }
+      if (user) await ensureUserProfile(user);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Fetch quizzes when view changes to landing or local
