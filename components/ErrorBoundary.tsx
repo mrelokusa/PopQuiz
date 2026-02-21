@@ -1,7 +1,4 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-
-// Ensure Component is properly imported from React
-const ReactComponent = Component as any;
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import NeoButton from './ui/NeoButton';
 import NeoCard from './ui/NeoCard';
@@ -17,7 +14,7 @@ interface State {
   errorInfo?: ErrorInfo;
 }
 
-class ErrorBoundary extends ReactComponent<Props, State> {
+class ErrorBoundary extends Component<Props, State> {
   public state: State;
 
   constructor(props: Props) {
