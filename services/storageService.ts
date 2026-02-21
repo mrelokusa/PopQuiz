@@ -40,7 +40,7 @@ export const getQuizzes = async (scope: 'global' | 'local', userId?: string): Pr
 
     if (error) {
       console.error("Supabase fetch error:", error);
-      return [];
+      throw new Error(error.message || "Failed to load quizzes");
     }
 
     return data.map((item: any) => ({
@@ -48,9 +48,9 @@ export const getQuizzes = async (scope: 'global' | 'local', userId?: string): Pr
       createdAt: parseCreatedAt(item.created_at)
     }));
 
-  } catch (e) {
+  } catch (e: any) {
     console.error("Storage error", e);
-    return [];
+    throw e;
   }
 };
 

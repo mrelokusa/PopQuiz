@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, Database, TrendingUp, Play, Ghost } from 'lucide-react';
+import { RefreshCw, Database, TrendingUp, Play, Ghost, AlertTriangle } from 'lucide-react';
 import NeoCard from '../ui/NeoCard';
 import NeoButton from '../ui/NeoButton';
 import { useApp } from '../../contexts/AppContext';
@@ -8,7 +8,7 @@ import { seedDatabase } from '../../services/storageService';
 import { AppState } from '../../types';
 
 const QuizGallery: React.FC = () => {
-  const { quizzes, loading, fetchQuizzes, setActiveQuiz, setView } = useApp();
+  const { quizzes, loading, quizError, fetchQuizzes, setActiveQuiz, setView } = useApp();
 
   const handleStartQuiz = (quiz: any) => {
     setActiveQuiz(quiz);
@@ -28,6 +28,22 @@ const QuizGallery: React.FC = () => {
         <p className="font-bold text-gray-400">
           {loading.message || 'Loading Quizzes...'}
         </p>
+      </div>
+    );
+  }
+
+  if (quizError) {
+    return (
+      <div className="text-center py-12 space-y-3">
+        <div className="inline-block bg-red-100 border-2 border-black p-4 rounded-full">
+          <AlertTriangle className="w-8 h-8 text-red-500"/>
+        </div>
+        <p className="font-bold text-red-600">Couldn't load quizzes</p>
+        <p className="text-sm text-gray-500 max-w-xs mx-auto">{quizError}</p>
+        <p className="text-xs text-gray-400">Check your Supabase RLS policies allow public reads on PopQuiz_Quizzes.</p>
+        <button onClick={() => fetchQuizzes('global')} className="text-xs font-bold underline hover:text-neo-periwinkle">
+          Try again
+        </button>
       </div>
     );
   }
@@ -105,31 +121,12 @@ const QuizGallery: React.FC = () => {
   );
 };
 
-const QuizGallerySection: React.FC = () => {
-  return (
-    <section className="pt-8">
-      <header className="flex items-center justify-between mb-4 px-2">
-        <h2 className="font-black uppercase tracking-widest text-sm bg-black text-white px-2 py-1 transform -rotate-1">
-          Trending Globally
-        </h2>
-        <div className="flex gap-2">
-          <QuizGallerySection.RefreshButton />
-          <QuizGallerySection.SeedButton />
-        </div>
-      </header>
-      
-      <QuizGallery />
-    </section>
-  );
-};
-
-// Sub-components
 const RefreshButton: React.FC = () => {
   const { fetchQuizzes } = useApp();
-  
+
   return (
-    <button 
-      onClick={() => fetchQuizzes('global')} 
+    <button
+      onClick={() => fetchQuizzes('global')}
       className="p-1 hover:bg-black hover:text-white rounded transition-colors"
       aria-label="Refresh quizzes"
     >
@@ -140,7 +137,7 @@ const RefreshButton: React.FC = () => {
 
 const SeedButton: React.FC = () => {
   const { addToast } = useToast();
-  
+
   const handleSeed = async () => {
     try {
       await seedDatabase();
@@ -149,11 +146,11 @@ const SeedButton: React.FC = () => {
       addToast(error.message || "Failed to seed database", 'error');
     }
   };
-  
+
   return (
-    <button 
-      onClick={handleSeed} 
-      className="p-1 hover:bg-black hover:text-white rounded transition-colors" 
+    <button
+      onClick={handleSeed}
+      className="p-1 hover:bg-black hover:text-white rounded transition-colors"
       title="Seed Demo Data"
       aria-label="Seed demo data"
     >
@@ -162,7 +159,22 @@ const SeedButton: React.FC = () => {
   );
 };
 
-QuizGallerySection.RefreshButton = RefreshButton;
-QuizGallerySection.SeedButton = SeedButton;
+const QuizGallerySection: React.FC = () => {
+  return (
+    <section className="pt-8">
+      <header className="flex items-center justify-between mb-4 px-2">
+        <h2 className="font-black uppercase tracking-widest text-sm bg-black text-white px-2 py-1 transform -rotate-1">
+          Trending Globally
+        </h2>
+        <div className="flex gap-2">
+          <RefreshButton />
+          <SeedButton />
+        </div>
+      </header>
+
+      <QuizGallery />
+    </section>
+  );
+};
 
 export default QuizGallerySection;

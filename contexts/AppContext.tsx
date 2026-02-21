@@ -11,6 +11,7 @@ interface AppStateData {
   activeQuiz: Quiz | null;
   quizzes: Quiz[];
   loading: LoadingState;
+  quizError: string | null;
 }
 
 // Action types
@@ -20,6 +21,7 @@ type AppAction =
   | { type: 'SET_ACTIVE_QUIZ'; payload: Quiz | null }
   | { type: 'SET_QUIZZES'; payload: Quiz[] }
   | { type: 'SET_LOADING'; payload: LoadingState }
+  | { type: 'SET_QUIZ_ERROR'; payload: string | null }
   | { type: 'ADD_QUIZ'; payload: Quiz }
   | { type: 'UPDATE_QUIZ'; payload: { id: string; updates: Partial<Quiz> } }
   | { type: 'RESET_STATE' };
@@ -30,7 +32,8 @@ const initialState: AppStateData = {
   view: AppState.LANDING,
   activeQuiz: null,
   quizzes: [],
-  loading: { isLoading: false }
+  loading: { isLoading: false },
+  quizError: null
 };
 
 // Reducer
@@ -46,6 +49,8 @@ const appReducer = (state: AppStateData, action: AppAction): AppStateData => {
       return { ...state, quizzes: action.payload };
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
+    case 'SET_QUIZ_ERROR':
+      return { ...state, quizError: action.payload };
     case 'ADD_QUIZ':
       return { ...state, quizzes: [action.payload, ...state.quizzes] };
     case 'UPDATE_QUIZ':
@@ -74,6 +79,7 @@ interface AppContextType extends AppStateData {
   setLoading: (loading: LoadingState) => void;
   fetchQuizzes: (scope: 'global' | 'local') => Promise<void>;
   logout: () => Promise<void>;
+  quizError: string | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -95,12 +101,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   // Fetch quizzes
   const fetchQuizzes = async (scope: 'global' | 'local') => {
     setLoading({ isLoading: true, message: 'Loading quizzes...' });
+    dispatch({ type: 'SET_QUIZ_ERROR', payload: null });
     try {
       const userId = scope === 'local' ? state.user?.id : undefined;
       const quizzes = await getQuizzes(scope, userId);
       dispatch({ type: 'SET_QUIZZES', payload: quizzes });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch quizzes:', error);
+      dispatch({ type: 'SET_QUIZ_ERROR', payload: error?.message || 'Failed to load quizzes' });
+      dispatch({ type: 'SET_QUIZZES', payload: [] });
     } finally {
       setLoading({ isLoading: false });
     }

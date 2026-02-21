@@ -24,10 +24,8 @@ const AppContent: React.FC = () => {
       case AppState.AUTH:
         return (
           <Suspense fallback={<QuizCardSkeleton />}>
-            <AuthScreen 
-              onAuthSuccess={() => {
-                window.location.reload(); 
-              }} 
+            <AuthScreen
+              onAuthSuccess={() => setView(AppState.LANDING)}
               onCancel={() => setView(AppState.LANDING)}
             />
           </Suspense>
@@ -36,7 +34,7 @@ const AppContent: React.FC = () => {
       case AppState.CREATE:
         return (
           <Suspense fallback={<QuizCardSkeleton />}>
-            <QuizBuilder onComplete={() => setView(AppState.LOCAL)} />
+            <QuizBuilder onComplete={() => setView(AppState.LANDING)} />
           </Suspense>
         );
       
@@ -56,7 +54,7 @@ const AppContent: React.FC = () => {
       case AppState.LOCAL:
         return (
           <Suspense fallback={<QuizCardSkeleton />}>
-            <SocialHub userId={user?.id} />
+            <SocialHub userId={user!.id} />
           </Suspense>
         );
 

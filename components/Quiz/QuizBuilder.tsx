@@ -102,9 +102,12 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onComplete }) => {
       
       const success = await saveQuiz(newQuiz);
       setSaving(false);
-      
+
       if (success) {
+        addToast('Quiz published!', 'success');
         onComplete();
+      } else {
+        addToast('Failed to publish quiz. Check the console for details.', 'error');
       }
      } else {
         addToast("Please ensure your quiz has a title, questions, and outcomes.", 'warning');
@@ -261,8 +264,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onComplete }) => {
                              },
                              {
                                  value: QuizVisibility.UNLISTED,
-                                 label: 'Unlisted', 
-                                 desc: 'Only people with the link can play',
+                                 label: 'Link Only',
+                                 desc: 'Not in the feed — share the link directly with friends',
                                  icon: Link,
                                  color: 'bg-neo-lemon'
                              },
@@ -315,25 +318,71 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onComplete }) => {
                      <NeoCard key={qIdx} className="p-4 hover:shadow-neo-lg transition-shadow">
                         <div className="flex justify-between mb-2">
                             <span className="font-black text-neo-periwinkle">Q{qIdx + 1}</span>
-                            <button className="text-red-500 hover:bg-red-100 p-1 rounded"><Trash className="w-4 h-4"/></button>
+                            <button
+                                onClick={() => setQuizData(prev => ({
+                                    ...prev,
+                                    questions: prev.questions?.filter((_, i) => i !== qIdx)
+                                }))}
+                                className="text-red-500 hover:bg-red-100 p-1 rounded"
+                            >
+                                <Trash className="w-4 h-4"/>
+                            </button>
                         </div>
-                        <input 
-                            value={q.text} 
-                            readOnly 
+                        <input
+                            value={q.text}
+                            onChange={e => setQuizData(prev => ({
+                                ...prev,
+                                questions: prev.questions?.map((question, i) =>
+                                    i === qIdx ? { ...question, text: e.target.value } : question
+                                )
+                            }))}
                             className="w-full font-serif font-bold text-lg border-b-2 border-black/10 focus:outline-none mb-3 bg-transparent"
+                            placeholder="Question text..."
                         />
                         <div className="space-y-2 pl-4 border-l-4 border-black/10">
                             {q.answers.map((a, aIdx) => (
-                                <div key={aIdx} className="flex justify-between items-center text-sm">
-                                    <span className="font-medium">{a.text}</span>
-                                    <span className="text-xs font-mono bg-gray-200 px-1 rounded">{quizData.outcomes?.find(o => o.id === a.outcomeId)?.image}</span>
+                                <div key={aIdx} className="flex justify-between items-center text-sm gap-2">
+                                    <input
+                                        value={a.text}
+                                        onChange={e => setQuizData(prev => ({
+                                            ...prev,
+                                            questions: prev.questions?.map((question, i) =>
+                                                i === qIdx
+                                                    ? {
+                                                        ...question,
+                                                        answers: question.answers.map((ans, j) =>
+                                                            j === aIdx ? { ...ans, text: e.target.value } : ans
+                                                        )
+                                                      }
+                                                    : question
+                                            )
+                                        }))}
+                                        className="flex-1 font-medium bg-transparent border-b border-black/20 focus:outline-none focus:border-black"
+                                        placeholder="Answer text..."
+                                    />
+                                    <span className="text-xs font-mono bg-gray-200 px-1 rounded flex-shrink-0">{quizData.outcomes?.find(o => o.id === a.outcomeId)?.image}</span>
                                 </div>
                             ))}
                         </div>
                      </NeoCard>
                  ))}
-                 
-                 <button className="w-full py-4 border-2 border-dashed border-black rounded-xl font-bold text-gray-500 hover:bg-white hover:text-black transition-colors flex items-center justify-center gap-2">
+
+                 <button
+                     onClick={() => {
+                         const outcomes = quizData.outcomes || [];
+                         const newQ = {
+                             id: `q${Date.now()}`,
+                             text: '',
+                             answers: outcomes.slice(0, 2).map((o, i) => ({
+                                 id: `q${Date.now()}_a${i}`,
+                                 text: '',
+                                 outcomeId: o.id
+                             }))
+                         };
+                         setQuizData(prev => ({ ...prev, questions: [...(prev.questions || []), newQ] }));
+                     }}
+                     className="w-full py-4 border-2 border-dashed border-black rounded-xl font-bold text-gray-500 hover:bg-white hover:text-black transition-colors flex items-center justify-center gap-2"
+                 >
                      <Plus className="w-5 h-5" /> Add Question
                  </button>
             </div>

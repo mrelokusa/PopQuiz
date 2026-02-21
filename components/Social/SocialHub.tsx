@@ -1,17 +1,44 @@
 import React, { useEffect, useState } from 'react';
-import { Quiz, QuizResult } from '../../types';
+import { Quiz, QuizResult, QuizVisibility } from '../../types';
 import { getQuizzes, getMyQuizActivity } from '../../services/storageService';
 import NeoCard from '../ui/NeoCard';
-import { Sparkles, Activity, Crown, TrendingUp, Zap, Users } from 'lucide-react';
+import { useToast } from '../../contexts/ToastContext';
+import { Sparkles, Activity, Crown, TrendingUp, Zap, Users, Globe, Lock, Link, Share2 } from 'lucide-react';
+
+const VisibilityBadge: React.FC<{ visibility?: QuizVisibility }> = ({ visibility }) => {
+  const config = {
+    [QuizVisibility.PUBLIC]:   { label: 'Public',    icon: Globe, className: 'bg-neo-mint border-black text-black' },
+    [QuizVisibility.PRIVATE]:  { label: 'Private',   icon: Lock,  className: 'bg-neo-coral border-black text-black' },
+    [QuizVisibility.UNLISTED]: { label: 'Link Only', icon: Link,  className: 'bg-neo-lemon border-black text-black' },
+  };
+  const v = visibility ?? QuizVisibility.PUBLIC;
+  const { label, icon: Icon, className } = config[v];
+  return (
+    <span className={`inline-flex items-center gap-1 border text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md transform -rotate-1 ${className}`}>
+      <Icon className="w-2.5 h-2.5" />{label}
+    </span>
+  );
+};
 
 interface SocialHubProps {
   userId: string;
 }
 
 const SocialHub: React.FC<SocialHubProps> = ({ userId }) => {
+  const { addToast } = useToast();
   const [myQuizzes, setMyQuizzes] = useState<Quiz[]>([]);
   const [activity, setActivity] = useState<QuizResult[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const handleShare = async (quiz: Quiz) => {
+    const url = `${window.location.origin}?quiz=${quiz.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      addToast(`Link copied! Share it with friends.`, 'success');
+    } catch {
+      addToast(`Share this link: ${url}`, 'info', 8000);
+    }
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -103,7 +130,8 @@ const SocialHub: React.FC<SocialHubProps> = ({ userId }) => {
                              <NeoCard className="p-4 flex justify-between items-center hover:bg-white transition-colors">
                                 <div>
                                     <h4 className="font-bold text-lg leading-tight">{quiz.title}</h4>
-                                    <div className="flex items-center gap-2 mt-1">
+                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                        <VisibilityBadge visibility={quiz.visibility} />
                                         <div className="bg-black text-white text-[10px] font-bold px-1.5 rounded-full flex items-center gap-1">
                                             <TrendingUp className="w-3 h-3" />
                                             {quiz.plays}
@@ -113,10 +141,19 @@ const SocialHub: React.FC<SocialHubProps> = ({ userId }) => {
                                         </p>
                                     </div>
                                 </div>
-                                <div className="flex -space-x-2 opacity-50 grayscale group-hover:grayscale-0 transition-all">
-                                    {quiz.outcomes.slice(0,3).map((o, i) => (
-                                        <div key={i} className={`w-8 h-8 rounded-full border-2 border-black ${o.colorClass} flex items-center justify-center text-xs`}>{o.image}</div>
-                                    ))}
+                                <div className="flex items-center gap-2">
+                                    <div className="flex -space-x-2 opacity-50 grayscale group-hover:grayscale-0 transition-all">
+                                        {quiz.outcomes.slice(0,3).map((o, i) => (
+                                            <div key={i} className={`w-8 h-8 rounded-full border-2 border-black ${o.colorClass} flex items-center justify-center text-xs`}>{o.image}</div>
+                                        ))}
+                                    </div>
+                                    <button
+                                        onClick={() => handleShare(quiz)}
+                                        className="w-8 h-8 rounded-full border-2 border-black bg-white hover:bg-neo-lemon flex items-center justify-center transition-colors flex-shrink-0"
+                                        title="Copy share link"
+                                    >
+                                        <Share2 className="w-3.5 h-3.5" />
+                                    </button>
                                 </div>
                              </NeoCard>
                         </div>

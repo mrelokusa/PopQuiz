@@ -53,7 +53,7 @@ export const generateAIQuiz = async (topic: string): Promise<Partial<Quiz> | nul
     const ai = new GoogleGenAI({ apiKey });
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.0-flash',
       contents: `Create a viral personality quiz about: ${topic}.`,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
