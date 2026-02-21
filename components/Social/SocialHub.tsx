@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Quiz, QuizResult, QuizVisibility } from '../../types';
+import { Quiz, QuizResult, QuizVisibility, AppState } from '../../types';
 import { getQuizzes, getMyQuizActivity } from '../../services/storageService';
 import NeoCard from '../ui/NeoCard';
 import { useToast } from '../../contexts/ToastContext';
+import { useApp } from '../../contexts/AppContext';
 import { Sparkles, Activity, Crown, TrendingUp, Zap, Users, Globe, Lock, Link, Share2 } from 'lucide-react';
 
 const VisibilityBadge: React.FC<{ visibility?: QuizVisibility }> = ({ visibility }) => {
@@ -26,6 +27,7 @@ interface SocialHubProps {
 
 const SocialHub: React.FC<SocialHubProps> = ({ userId }) => {
   const { addToast } = useToast();
+  const { setActiveQuiz, setView } = useApp();
   const [myQuizzes, setMyQuizzes] = useState<Quiz[]>([]);
   const [activity, setActivity] = useState<QuizResult[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,8 +128,8 @@ const SocialHub: React.FC<SocialHubProps> = ({ userId }) => {
                     </div>
                 ) : (
                     myQuizzes.map(quiz => (
-                        <div key={quiz.id} className="group cursor-default">
-                             <NeoCard className="p-4 flex justify-between items-center hover:bg-white transition-colors">
+                        <div key={quiz.id} className="group cursor-pointer" onClick={() => { setActiveQuiz(quiz); setView(AppState.PLAY); }}>
+                             <NeoCard className="p-4 flex justify-between items-center hover:bg-neo-paper transition-colors">
                                 <div>
                                     <h4 className="font-bold text-lg leading-tight">{quiz.title}</h4>
                                     <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -148,7 +150,7 @@ const SocialHub: React.FC<SocialHubProps> = ({ userId }) => {
                                         ))}
                                     </div>
                                     <button
-                                        onClick={() => handleShare(quiz)}
+                                        onClick={(e) => { e.stopPropagation(); handleShare(quiz); }}
                                         className="w-8 h-8 rounded-full border-2 border-black bg-white hover:bg-neo-lemon flex items-center justify-center transition-colors flex-shrink-0"
                                         title="Copy share link"
                                     >
