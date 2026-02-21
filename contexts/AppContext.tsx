@@ -133,32 +133,32 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     const initializeApp = async () => {
       setLoading({ isLoading: true, message: 'Initializing...' });
 
-      try {
-        const user = await getCurrentUser();
-        if (cancelled) return;
-
-        if (user) {
+      // Auth and quiz loading run independently — one failing won't block the other
+      const authPromise = getCurrentUser()
+        .then(async (user) => {
+          if (cancelled || !user) return;
           await ensureUserProfile(user);
-          if (cancelled) return;
-          setUser(user);
-        }
+          if (!cancelled) setUser(user);
+        })
+        .catch((e) => console.warn('Auth init skipped:', e?.message));
 
-        // Check deep link
+      const deepLinkPromise = (async () => {
         const params = new URLSearchParams(window.location.search);
         const quizId = params.get('quiz');
-        if (quizId) {
+        if (!quizId) return;
+        try {
           const quiz = await getQuizById(quizId);
-          if (cancelled) return;
-          if (quiz) {
+          if (!cancelled && quiz) {
             setActiveQuiz(quiz);
             setView(AppState.PLAY);
           }
+        } catch (e) {
+          console.warn('Deep link load failed:', e);
         }
-      } catch (error: any) {
-        if (!cancelled) console.error('App initialization failed:', error);
-      } finally {
-        if (!cancelled) setLoading({ isLoading: false });
-      }
+      })();
+
+      await Promise.allSettled([authPromise, deepLinkPromise]);
+      if (!cancelled) setLoading({ isLoading: false });
     };
 
     initializeApp();
