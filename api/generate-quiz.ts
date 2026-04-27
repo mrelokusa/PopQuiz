@@ -2,12 +2,24 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, Type } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 
+// Keep this list in sync with constants/outcomeIcons.ts. We inline rather
+// than import so the serverless function doesn't pull lucide-react.
+const ICON_NAMES = [
+  'crown','skull','ghost','bot','cat','dog','bird','fish','rabbit','rat',
+  'heart','flame','zap','star','sparkles','sun','moon','cloud','mountain','anchor',
+  'eye','smile','brain','drama','music','book','coffee','pizza','camera','gamepad',
+  'rocket','trophy','target','compass','hammer','scissors','key','gem',
+];
+
 const SYSTEM_INSTRUCTION = `
 You are a creative viral content generator.
 Create fun, engaging, and slightly edgy personality quizzes.
 The output must be strictly JSON matching the schema.
 Ensure questions are short and answers map clearly to specific outcomes.
 Include 4 distinct outcomes and 6 questions.
+For each outcome, set "image" to ONE name from this list, picking the icon
+that best matches the outcome's vibe: ${ICON_NAMES.join(', ')}.
+Do not invent new names and do not use emojis.
 `;
 
 // Per-user hourly cap. Generous enough that real users never see it; tight
@@ -27,7 +39,7 @@ const RESPONSE_SCHEMA = {
           id: { type: Type.STRING },
           title: { type: Type.STRING },
           description: { type: Type.STRING },
-          image: { type: Type.STRING, description: 'A single emoji representing this outcome' },
+          image: { type: Type.STRING, description: `One icon name from: ${ICON_NAMES.join(', ')}` },
         },
         required: ['id', 'title', 'description', 'image'],
       },

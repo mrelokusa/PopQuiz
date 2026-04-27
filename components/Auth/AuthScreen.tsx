@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { createProfile } from '../../services/authService';
+import { createProfile, avatarTextFromUsername } from '../../services/authService';
 import NeoCard from '../ui/NeoCard';
 import NeoButton from '../ui/NeoButton';
 import { Sparkles, ArrowRight, User, X } from 'lucide-react';
@@ -67,8 +67,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onCancel }) => {
         // CRITICAL FIX: Only attempt to create profile if we have an active session.
         // If email confirmation is enabled, session will be null here.
         if (data.session && data.user) {
-          const randomAvatar = ['👽', '👾', '🤖', '👻', '🦄', '🐯'][Math.floor(Math.random() * 6)];
-          await createProfile(data.user.id, username || 'New User', randomAvatar);
+          const finalUsername = username || 'New User';
+          await createProfile(data.user.id, finalUsername, avatarTextFromUsername(finalUsername));
           onAuthSuccess();
         } else if (data.user && !data.session) {
            setMessage("Account created! Please check your email to confirm before logging in.");

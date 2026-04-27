@@ -1,15 +1,18 @@
 import { Quiz } from '../types';
 
+// "image" values are icon names from constants/outcomeIcons.ts.
+// The OutcomeIcon component resolves them to lucide icons at render time.
+
 export const SEED_DATA: Partial<Quiz>[] = [
   {
     title: "Which 'The Office' Character Matches Your Energy?",
     description: "Are you the World's Best Boss or just here for pretzel day? Find out now.",
     author: "DunderMifflinAdmin",
     outcomes: [
-       { id: 'o1', title: 'Michael Scott', description: 'Chaotic, needy, but ultimately full of love. You want people to be afraid of how much they love you.', image: '👔', colorClass: 'bg-neo-blue' },
-       { id: 'o2', title: 'Dwight Schrute', description: 'Intense, loyal, and prepared for the apocalypse. You are the Assistant (to the) Regional Manager.', image: '👓', colorClass: 'bg-neo-lemon' },
-       { id: 'o3', title: 'Kelly Kapoor', description: 'You have a lot of questions. Number one: how dare you?', image: '💅', colorClass: 'bg-neo-coral' },
-       { id: 'o4', title: 'Stanley Hudson', description: 'You are done. You have been done since 9am. Did I stutter?', image: '🥨', colorClass: 'bg-neo-mint' }
+       { id: 'o1', title: 'Michael Scott',  description: 'Chaotic, needy, but ultimately full of love. You want people to be afraid of how much they love you.', image: 'crown',  colorClass: 'bg-neo-blue' },
+       { id: 'o2', title: 'Dwight Schrute', description: 'Intense, loyal, and prepared for the apocalypse. You are the Assistant (to the) Regional Manager.',     image: 'eye',    colorClass: 'bg-neo-lemon' },
+       { id: 'o3', title: 'Kelly Kapoor',   description: 'You have a lot of questions. Number one: how dare you?',                                                  image: 'sparkles', colorClass: 'bg-neo-coral' },
+       { id: 'o4', title: 'Stanley Hudson', description: 'You are done. You have been done since 9am. Did I stutter?',                                              image: 'coffee', colorClass: 'bg-neo-mint' }
     ],
     questions: [
         {
@@ -43,10 +46,10 @@ export const SEED_DATA: Partial<Quiz>[] = [
     description: "Forget your zodiac sign. Are you Cottagecore, Dark Academia, or Y2K Chaos?",
     author: "VibeChecker",
     outcomes: [
-       { id: 'o1', title: 'Dark Academia', description: 'Tweed blazers, rainy days, and secret societies. You romanticize studying.', image: '🕯️', colorClass: 'bg-neo-black text-white' },
-       { id: 'o2', title: 'Cottagecore', description: 'Baking bread, frolicking in meadows, and rejecting modernity.', image: '🍄', colorClass: 'bg-neo-mint' },
-       { id: 'o3', title: 'Y2K Cyber', description: 'Chrome, neon, fast internet, and faster sunglasses. You are living in 2003.', image: '💿', colorClass: 'bg-neo-periwinkle' },
-       { id: 'o4', title: 'Goblin Mode', description: 'Comfort over everything. Snacks in bed. Feral energy.', image: '👹', colorClass: 'bg-neo-coral' }
+       { id: 'o1', title: 'Dark Academia', description: 'Tweed blazers, rainy days, and secret societies. You romanticize studying.',          image: 'book',     colorClass: 'bg-neo-black text-white' },
+       { id: 'o2', title: 'Cottagecore',   description: 'Baking bread, frolicking in meadows, and rejecting modernity.',                       image: 'flame',    colorClass: 'bg-neo-mint' },
+       { id: 'o3', title: 'Y2K Cyber',     description: 'Chrome, neon, fast internet, and faster sunglasses. You are living in 2003.',        image: 'gamepad',  colorClass: 'bg-neo-periwinkle' },
+       { id: 'o4', title: 'Goblin Mode',   description: 'Comfort over everything. Snacks in bed. Feral energy.',                              image: 'skull',    colorClass: 'bg-neo-coral' }
     ],
     questions: [
         {
@@ -80,10 +83,10 @@ export const SEED_DATA: Partial<Quiz>[] = [
     description: "The most important scientific question of our time.",
     author: "CarbLoader",
     outcomes: [
-       { id: 'o1', title: 'Sourdough', description: 'High maintenance, tangy, and universally loved. You have a lot of culture.', image: '🍞', colorClass: 'bg-neo-lemon' },
-       { id: 'o2', title: 'Bagel', description: 'Thick, tough exterior, soft interior. You are versatile but dense.', image: '🥯', colorClass: 'bg-neo-blue' },
-       { id: 'o3', title: 'Croissant', description: 'Flaky, messy, and expensive. You fall apart easily but look good doing it.', image: '🥐', colorClass: 'bg-neo-coral' },
-       { id: 'o4', title: 'White Bread', description: 'Classic, reliable, maybe a bit boring. You get the job done.', image: '🥪', colorClass: 'bg-neo-paper' }
+       { id: 'o1', title: 'Sourdough',   description: 'High maintenance, tangy, and universally loved. You have a lot of culture.',     image: 'star',    colorClass: 'bg-neo-lemon' },
+       { id: 'o2', title: 'Bagel',       description: 'Thick, tough exterior, soft interior. You are versatile but dense.',             image: 'anchor',  colorClass: 'bg-neo-blue' },
+       { id: 'o3', title: 'Croissant',   description: 'Flaky, messy, and expensive. You fall apart easily but look good doing it.',     image: 'sparkles',colorClass: 'bg-neo-coral' },
+       { id: 'o4', title: 'White Bread', description: 'Classic, reliable, maybe a bit boring. You get the job done.',                   image: 'smile',   colorClass: 'bg-neo-paper' }
     ],
     questions: [
         {
@@ -117,10 +120,10 @@ export const SEED_DATA: Partial<Quiz>[] = [
     description: "We all have one. Let's find out what makes you un-dateable.",
     author: "DatingPolice",
     outcomes: [
-       { id: 'o1', title: 'The Ghost', description: 'You avoid conflict by simply vanishing from existence. Spooky.', image: '👻', colorClass: 'bg-neo-black text-white' },
-       { id: 'o2', title: 'The Clinger', description: 'You have sent 45 texts in the last hour. Put the phone down.', image: '🧲', colorClass: 'bg-neo-coral' },
-       { id: 'o3', title: 'The Project Manager', description: 'You treat relationships like a job. Where is the spreadsheet?', image: '📋', colorClass: 'bg-neo-blue' },
-       { id: 'o4', title: 'The Main Character', description: 'It is your world, we are just NPCs living in it.', image: '🎬', colorClass: 'bg-neo-lemon' }
+       { id: 'o1', title: 'The Ghost',           description: 'You avoid conflict by simply vanishing from existence. Spooky.',  image: 'ghost',  colorClass: 'bg-neo-black text-white' },
+       { id: 'o2', title: 'The Clinger',         description: 'You have sent 45 texts in the last hour. Put the phone down.',     image: 'heart',  colorClass: 'bg-neo-coral' },
+       { id: 'o3', title: 'The Project Manager', description: 'You treat relationships like a job. Where is the spreadsheet?',    image: 'target', colorClass: 'bg-neo-blue' },
+       { id: 'o4', title: 'The Main Character',  description: 'It is your world, we are just NPCs living in it.',                  image: 'crown',  colorClass: 'bg-neo-lemon' }
     ],
     questions: [
         {
@@ -154,10 +157,10 @@ export const SEED_DATA: Partial<Quiz>[] = [
     description: "Forget spirit animals. We're doing haunted items.",
     author: "OccultWeekly",
     outcomes: [
-       { id: 'o1', title: 'Annabelle Doll', description: 'You look innocent but you thrive on chaos. Do not open the glass case.', image: '🎀', colorClass: 'bg-neo-coral' },
-       { id: 'o2', title: 'Haunted Mirror', description: 'You reflect people\'s insecurities back at them. Brutally honest.', image: '🪞', colorClass: 'bg-neo-periwinkle' },
-       { id: 'o3', title: 'Monkey\'s Paw', description: 'You give people what they want, but in the worst way possible.', image: '🐒', colorClass: 'bg-neo-mint' },
-       { id: 'o4', title: 'Video Tape from The Ring', description: 'You are viral, toxic, and people only have 7 days to deal with you.', image: '📼', colorClass: 'bg-neo-black text-white' }
+       { id: 'o1', title: 'Annabelle Doll',          description: 'You look innocent but you thrive on chaos. Do not open the glass case.',     image: 'smile',  colorClass: 'bg-neo-coral' },
+       { id: 'o2', title: 'Haunted Mirror',          description: "You reflect people's insecurities back at them. Brutally honest.",            image: 'eye',    colorClass: 'bg-neo-periwinkle' },
+       { id: 'o3', title: "Monkey's Paw",            description: 'You give people what they want, but in the worst way possible.',              image: 'key',    colorClass: 'bg-neo-mint' },
+       { id: 'o4', title: 'Video Tape from The Ring', description: 'You are viral, toxic, and people only have 7 days to deal with you.',       image: 'skull',  colorClass: 'bg-neo-black text-white' }
     ],
     questions: [
         {
@@ -191,10 +194,10 @@ export const SEED_DATA: Partial<Quiz>[] = [
     description: "Are you a circle-back or a deep-dive?",
     author: "LinkedInInfluencer",
     outcomes: [
-       { id: 'o1', title: 'The Sycophant', description: 'You agree with everything. "Great point!" is your catchphrase.', image: '🤝', colorClass: 'bg-neo-blue' },
-       { id: 'o2', title: 'The Ghost Employee', description: 'You are on payroll but nobody knows what you actually do.', image: '🌫️', colorClass: 'bg-neo-paper' },
-       { id: 'o3', title: 'The Buzzword King', description: 'We need to leverage our synergy to drill down on the low hanging fruit.', image: '🚀', colorClass: 'bg-neo-lemon' },
-       { id: 'o4', title: 'The Burnout', description: 'You are hanging on by a thread and a dry shampoo.', image: '🔥', colorClass: 'bg-neo-coral' }
+       { id: 'o1', title: 'The Sycophant',      description: 'You agree with everything. "Great point!" is your catchphrase.',                       image: 'smile',   colorClass: 'bg-neo-blue' },
+       { id: 'o2', title: 'The Ghost Employee', description: 'You are on payroll but nobody knows what you actually do.',                            image: 'ghost',   colorClass: 'bg-neo-paper' },
+       { id: 'o3', title: 'The Buzzword King',  description: 'We need to leverage our synergy to drill down on the low hanging fruit.',              image: 'rocket',  colorClass: 'bg-neo-lemon' },
+       { id: 'o4', title: 'The Burnout',        description: 'You are hanging on by a thread and a dry shampoo.',                                    image: 'flame',   colorClass: 'bg-neo-coral' }
     ],
     questions: [
         {

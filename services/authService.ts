@@ -1,6 +1,14 @@
 import { supabase } from "../lib/supabaseClient";
 import { UserProfile } from "../types";
 
+// Derives a single-character avatar from a username. Carries the same
+// design language as the A/B/C/D answer buttons — bold serif initials.
+export const avatarTextFromUsername = (username: string): string => {
+  const trimmed = (username ?? '').trim();
+  if (!trimmed) return '?';
+  return trimmed.charAt(0).toUpperCase();
+};
+
 export const getCurrentUser = async () => {
   const { data: { session } } = await supabase.auth.getSession();
   return session?.user || null;
@@ -35,9 +43,8 @@ export const ensureUserProfile = async (user: any) => {
     if (!profile) {
         // Create it now using metadata or defaults
         const username = user.user_metadata?.username || user.email?.split('@')[0] || 'Anon';
-        const randomAvatar = ['👽', '👾', '🤖', '👻', '🦄', '🐯'][Math.floor(Math.random() * 6)];
         try {
-            await createProfile(user.id, username, randomAvatar);
+            await createProfile(user.id, username, avatarTextFromUsername(username));
         } catch (e) {
             console.error("Failed to auto-create profile", e);
         }

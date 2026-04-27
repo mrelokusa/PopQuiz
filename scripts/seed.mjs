@@ -55,24 +55,69 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-const rows = SEED_DATA.map((quiz) => ({
-  id: randomUUID(),
-  title: quiz.title,
-  description: quiz.description,
-  questions: quiz.questions,
-  outcomes: quiz.outcomes,
-  author: quiz.author,
-  user_id: null, // demo content — not owned by any real user
-  visibility: 'public',
-  plays: Math.floor(Math.random() * 5000) + 100,
-  created_at: Date.now() - Math.floor(Math.random() * 1_000_000_000),
-}));
+// Build quiz rows with the play count we'll later back up with real result
+// rows so the Vibe Check stats look believable.
+const quizRows = SEED_DATA.map((quiz) => {
+  const playCount = Math.floor(Math.random() * 400) + 50; // 50–450 per quiz
+  return {
+    id: randomUUID(),
+    title: quiz.title,
+    description: quiz.description,
+    questions: quiz.questions,
+    outcomes: quiz.outcomes,
+    author: quiz.author,
+    user_id: null, // demo content — not owned by any real user
+    visibility: 'public',
+    plays: playCount,
+    created_at: Date.now() - Math.floor(Math.random() * 1_000_000_000),
+    _playCount: playCount,
+  };
+});
 
-const { error } = await supabase.from('PopQuiz_Quizzes').insert(rows);
+// Insert the quizzes (strip the helper field).
+const { error: quizError } = await supabase
+  .from('PopQuiz_Quizzes')
+  .insert(quizRows.map(({ _playCount: _, ...row }) => row));
 
-if (error) {
-  console.error('Seed failed:', error);
+if (quizError) {
+  console.error('Seed failed (quizzes):', quizError);
   process.exit(1);
 }
 
-console.log(`Seeded ${rows.length} demo quizzes.`);
+// For each quiz, generate _playCount result rows distributed across outcomes
+// with a slight bias toward one "trending" outcome so the stats screen
+// shows a clear most-common result.
+const resultRows = [];
+for (const quiz of quizRows) {
+  const outcomes = quiz.outcomes;
+  if (!outcomes?.length) continue;
+  const trendingIdx = Math.floor(Math.random() * outcomes.length);
+
+  for (let i = 0; i < quiz._playCount; i++) {
+    // 40% chance trending outcome, 60% spread across the rest.
+    const pickTrending = Math.random() < 0.4;
+    const outcome = pickTrending
+      ? outcomes[trendingIdx]
+      : outcomes[Math.floor(Math.random() * outcomes.length)];
+
+    resultRows.push({
+      quiz_id: quiz.id,
+      outcome_id: outcome.id,
+      user_id: null, // anonymous demo plays
+      created_at: new Date(quiz.created_at + Math.floor(Math.random() * 1_000_000_000)).toISOString(),
+    });
+  }
+}
+
+// Insert in chunks to stay under any payload limits.
+const CHUNK = 500;
+for (let i = 0; i < resultRows.length; i += CHUNK) {
+  const chunk = resultRows.slice(i, i + CHUNK);
+  const { error: resErr } = await supabase.from('PopQuiz_Results').insert(chunk);
+  if (resErr) {
+    console.error(`Seed failed (results chunk ${i}):`, resErr);
+    process.exit(1);
+  }
+}
+
+console.log(`Seeded ${quizRows.length} quizzes and ${resultRows.length} result rows.`);

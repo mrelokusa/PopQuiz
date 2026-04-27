@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Quiz, Outcome } from '../../types';
-import { saveResult, getQuizOutcomeStats } from '../../services/storageService';
+import { Quiz, Outcome, QuizResult } from '../../types';
+import { saveResult, getQuizOutcomeStats, getRecentResultsForQuiz } from '../../services/storageService';
 import { getCurrentUser } from '../../services/authService';
 import { useToast } from '../../contexts/ToastContext';
 import NeoButton from '../ui/NeoButton';
 import NeoCard from '../ui/NeoCard';
+import OutcomeIcon from '../ui/OutcomeIcon';
 import { RefreshCw, Share2, TrendingUp, Sparkles } from 'lucide-react';
 
 interface QuizPlayerProps {
@@ -27,6 +28,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onExit }) => {
     mostCommonTitle: string;
     totalPlays: number;
   } | null>(null);
+  const [recentTakers, setRecentTakers] = useState<QuizResult[]>([]);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -102,6 +104,11 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onExit }) => {
         mostCommonTitle,
         totalPlays: total
     });
+
+    // 3. Recent takers — social proof.
+    const recent = await getRecentResultsForQuiz(quiz.id, 8);
+    // Filter out the current taker's just-saved row if present.
+    setRecentTakers(recent.filter(r => r.user_id !== user?.id));
   };
 
   const handleShare = async () => {
@@ -152,7 +159,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onExit }) => {
         <NeoCard className="p-0 overflow-hidden shadow-neo-xl mb-4 bg-white">
             <div className={`h-32 ${result.colorClass} border-b-2 border-black flex items-center justify-center relative overflow-hidden`}>
                 <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-                <span className="text-6xl filter drop-shadow-md animate-bounce">{result.image}</span>
+                <OutcomeIcon value={result.image} className="w-20 h-20 text-black drop-shadow-md animate-bounce" strokeWidth={2.5} />
             </div>
             <div className="p-8 text-center space-y-4">
                 <h2 className="text-3xl font-black uppercase tracking-tighter leading-none">{result.title}</h2>
@@ -172,19 +179,44 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onExit }) => {
                     </div>
                     <div>
                         <h3 className="font-black uppercase text-sm tracking-widest mb-1">Community Vibe Check</h3>
-                        <p className="font-bold text-sm leading-tight mb-2">
-                            {stats.isMostCommon 
+                        <p className="font-bold text-base leading-snug mb-2">
+                            {stats.isMostCommon
                                 ? `You're trending! ${stats.percent}% of people also got this result.`
                                 : `Rare find! Only ${stats.percent}% of people got this.`
                             }
                         </p>
                         {!stats.isMostCommon && (
-                            <p className="text-xs font-mono opacity-80">
+                            <p className="text-sm font-mono">
                                 Most people got: {stats.mostCommonTitle}
                             </p>
                         )}
                     </div>
                 </div>
+            </NeoCard>
+        )}
+
+        {recentTakers.length > 0 && (
+            <NeoCard className="p-4 mb-6 bg-white" noShadow>
+                <h3 className="font-black uppercase text-xs tracking-widest mb-3">Who else played</h3>
+                <ul className="space-y-2">
+                    {recentTakers.map(t => (
+                        <li key={t.id} className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full border-2 border-black bg-neo-paper flex items-center justify-center font-serif font-black text-sm flex-shrink-0">
+                                {t.taker_avatar}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm leading-tight truncate">
+                                    <span className="font-black">{t.taker_username}</span>
+                                    <span className="text-gray-500"> got </span>
+                                    <span className="font-black bg-neo-lemon px-1 border border-black">{t.outcome_title}</span>
+                                </p>
+                            </div>
+                            <div className="w-7 h-7 rounded-full border-2 border-black bg-neo-paper flex items-center justify-center flex-shrink-0">
+                                <OutcomeIcon value={t.outcome_image} className="w-3.5 h-3.5" />
+                            </div>
+                        </li>
+                    ))}
+                </ul>
             </NeoCard>
         )}
 

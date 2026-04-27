@@ -5,6 +5,7 @@ import { deleteMyAccount, exportMyData } from '../../services/accountService';
 import { supabase } from '../../lib/supabaseClient';
 import NeoCard from '../ui/NeoCard';
 import NeoButton from '../ui/NeoButton';
+import OutcomeIcon from '../ui/OutcomeIcon';
 import { useToast } from '../../contexts/ToastContext';
 import { useApp } from '../../contexts/AppContext';
 import { Sparkles, Activity, Crown, TrendingUp, Zap, Users, Globe, Lock, Link, Share2, Download, Trash2, Pencil } from 'lucide-react';
@@ -133,8 +134,8 @@ const SocialHub: React.FC<SocialHubProps> = ({ userId }) => {
         {/* Header */}
         <div className="flex items-center gap-4 bg-neo-black text-white p-6 rounded-2xl border-2 border-black shadow-neo-lg relative overflow-hidden">
              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-             <div className="w-16 h-16 bg-neo-lemon border-2 border-white rounded-full flex items-center justify-center text-3xl shadow-neo-sm">
-                👑
+             <div className="w-16 h-16 bg-neo-lemon border-2 border-white rounded-full flex items-center justify-center text-black shadow-neo-sm">
+                <Crown className="w-8 h-8" strokeWidth={2.5} />
              </div>
              <div>
                  <h2 className="text-2xl font-black italic">My Hub</h2>
@@ -144,12 +145,12 @@ const SocialHub: React.FC<SocialHubProps> = ({ userId }) => {
 
         {/* Virality Dashboard (Stats) */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <NeoCard className="p-4 bg-neo-blue text-white relative overflow-hidden">
-                <div className="absolute -right-2 -bottom-4 opacity-20">
+            <NeoCard className="p-4 bg-neo-periwinkle text-white relative overflow-hidden">
+                <div className="absolute -right-2 -bottom-4 opacity-30">
                     <Users className="w-24 h-24" />
                 </div>
                 <div className="relative z-10">
-                    <p className="text-xs font-black uppercase tracking-widest mb-1 opacity-80">Total Plays</p>
+                    <p className="text-xs font-black uppercase tracking-widest mb-1">Total Plays</p>
                     <p className="text-4xl font-serif font-black italic">{totalPlays.toLocaleString()}</p>
                 </div>
             </NeoCard>
@@ -210,7 +211,9 @@ const SocialHub: React.FC<SocialHubProps> = ({ userId }) => {
                                 <div className="flex items-center gap-1.5">
                                     <div className="hidden sm:flex -space-x-2 opacity-50 grayscale group-hover:grayscale-0 transition-all mr-1">
                                         {quiz.outcomes.slice(0,3).map((o, i) => (
-                                            <div key={i} className={`w-8 h-8 rounded-full border-2 border-black ${o.colorClass} flex items-center justify-center text-xs`}>{o.image}</div>
+                                            <div key={i} className={`w-8 h-8 rounded-full border-2 border-black ${o.colorClass} flex items-center justify-center text-black`}>
+                                                <OutcomeIcon value={o.image} className="w-4 h-4" />
+                                            </div>
                                         ))}
                                     </div>
                                     <button
@@ -267,8 +270,8 @@ const SocialHub: React.FC<SocialHubProps> = ({ userId }) => {
                         activity.map(res => (
                             <NeoCard key={res.id} className="p-3 bg-white flex items-center gap-3 relative overflow-hidden" noShadow>
                                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-black"></div>
-                                <div className="w-10 h-10 rounded-full border-2 border-black bg-neo-paper flex items-center justify-center text-lg">
-                                    {res.outcome_image}
+                                <div className="w-10 h-10 rounded-full border-2 border-black bg-neo-paper flex items-center justify-center text-black">
+                                    <OutcomeIcon value={res.outcome_image} className="w-5 h-5" />
                                 </div>
                                 <div className="flex-1">
                                     <p className="text-sm">

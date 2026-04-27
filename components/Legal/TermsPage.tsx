@@ -10,59 +10,83 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
 
 const TermsPage: React.FC = () => {
   return (
-    <LegalLayout title="Terms of Service" lastUpdated="2026-04-25">
-      <Section title="1. Acceptance">
+    <LegalLayout title="Terms of Service" lastUpdated="2026-04-27">
+      <Section title="Acceptance of these terms">
         <p>
-          By using PopQuiz you agree to these Terms. If you do not agree, do not use the service.
+          By accessing or using PopQuiz you agree to be bound by these Terms of Service. If you
+          do not agree, please do not use the service.
         </p>
       </Section>
 
-      <Section title="2. Accounts">
+      <Section title="Your account">
         <p>
-          You are responsible for keeping your account credentials secure. You must be at least 13
-          years old to create an account. You may not impersonate another person or use a username
-          that is misleading or offensive.
+          You are responsible for any activity that takes place under your account and for
+          keeping your sign-in credentials secure. You must be old enough in your jurisdiction
+          to enter into a binding agreement to use PopQuiz, and at minimum 13 years of age.
+        </p>
+        <p>
+          Choose a username that is not misleading, offensive, or impersonating another person.
+          We may reclaim usernames that violate this requirement.
         </p>
       </Section>
 
-      <Section title="3. Your content">
+      <Section title="User content">
         <p>
-          You retain ownership of quizzes you create. By making a quiz public or sharing a link,
-          you grant PopQuiz a non-exclusive, worldwide licence to host, display, and distribute it
-          so the service can function.
+          You retain ownership of the quizzes and other content you create. By making content
+          public or sharing a link to it, you grant PopQuiz a non-exclusive, worldwide,
+          royalty-free licence to host, store, reproduce, and display that content for the
+          purpose of operating the service.
         </p>
         <p>
-          Do not post content that is illegal, hateful, harassing, sexually explicit, or that
-          infringes someone else's rights. We may remove content and suspend accounts that violate
-          this rule, with or without notice.
-        </p>
-      </Section>
-
-      <Section title="4. AI generation">
-        <p>
-          PopQuiz uses third-party AI models to generate quiz content from prompts you provide.
-          Output is generated automatically and may be inaccurate, biased, or inappropriate. You
-          are responsible for reviewing AI-generated content before publishing.
+          You agree not to post content that is unlawful, hateful, harassing, sexually explicit,
+          or that infringes the rights of others. We may remove content and suspend or terminate
+          accounts that violate these terms.
         </p>
       </Section>
 
-      <Section title="5. Termination">
+      <Section title="AI-generated content">
         <p>
-          You may delete your account at any time from the My Hub page. We may suspend or delete
-          accounts that violate these Terms.
+          PopQuiz uses third-party generative AI to create quiz content from prompts you supply.
+          Output is produced automatically and may be inaccurate, incomplete, biased, or
+          unsuitable for your purposes. You are responsible for reviewing AI-generated content
+          before publishing it.
         </p>
       </Section>
 
-      <Section title="6. Disclaimers">
+      <Section title="Service availability">
         <p>
-          PopQuiz is provided "as is" without warranties of any kind. We do not guarantee
-          uninterrupted service or that the content will meet your expectations.
+          We aim to keep PopQuiz available but do not guarantee uninterrupted access. We may
+          modify, suspend, or discontinue features at any time without notice.
         </p>
       </Section>
 
-      <Section title="7. Contact">
+      <Section title="Termination">
         <p>
-          Questions about these Terms? Email <a className="underline" href="mailto:hello@popquiz.app">hello@popquiz.app</a>.
+          You may delete your account at any time from the My Hub page; deletion is immediate
+          and removes your data from our systems. We may suspend or terminate accounts that
+          violate these terms.
+        </p>
+      </Section>
+
+      <Section title="Disclaimers and liability">
+        <p>
+          PopQuiz is provided "as is" and "as available" without warranties of any kind, whether
+          express or implied. To the fullest extent permitted by law, PopQuiz and its operators
+          are not liable for any indirect, incidental, or consequential damages arising from
+          your use of the service.
+        </p>
+      </Section>
+
+      <Section title="Changes to these terms">
+        <p>
+          We may update these Terms from time to time. Continued use of PopQuiz after changes
+          take effect constitutes acceptance of the updated Terms.
+        </p>
+      </Section>
+
+      <Section title="Contact">
+        <p>
+          Questions about these Terms can be sent to <a className="underline" href="mailto:hello@popquiz.app">hello@popquiz.app</a>.
         </p>
       </Section>
     </LegalLayout>

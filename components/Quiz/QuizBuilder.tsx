@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Sparkles, Plus, Trash, Save, Globe, Lock, Link } from 'lucide-react';
 import NeoCard from '../ui/NeoCard';
 import NeoButton from '../ui/NeoButton';
+import OutcomeIcon from '../ui/OutcomeIcon';
+import { OUTCOME_ICONS } from '../../constants/outcomeIcons';
 import { Quiz, Outcome, QuizVisibility } from '../../types';
 import { generateAIQuiz, GenerateQuizException } from '../../services/geminiService';
 import { saveQuiz, updateQuiz } from '../../services/storageService';
@@ -73,8 +75,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onComplete, existingQuiz }) =
   const handleManualStart = () => {
     // Initialize with skeleton
     const outcomes: Outcome[] = [
-        { id: 'o1', title: 'Outcome 1', description: 'You are type A', image: '🅰️', colorClass: 'bg-neo-coral' },
-        { id: 'o2', title: 'Outcome 2', description: 'You are type B', image: '🅱️', colorClass: 'bg-neo-mint' },
+        { id: 'o1', title: 'Outcome 1', description: 'You are type A', image: 'star', colorClass: 'bg-neo-coral' },
+        { id: 'o2', title: 'Outcome 2', description: 'You are type B', image: 'gem',  colorClass: 'bg-neo-mint'  },
     ];
     setQuizData({
         title: topic || 'New Quiz',
@@ -231,13 +233,14 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onComplete, existingQuiz }) =
                      <h3 className="font-black uppercase text-sm mb-4 border-b-2 border-black pb-2">Outcomes ({quizData.outcomes?.length})</h3>
                      <div className="space-y-2">
                         {quizData.outcomes?.map((outcome, idx) => (
-                            <div key={idx} className={`p-3 border-2 border-black rounded-lg ${outcome.colorClass} flex gap-2 items-start`}>
-                                <div className="text-2xl">{outcome.image}</div>
-                                <div>
-                                    <p className="font-bold text-sm leading-tight">{outcome.title}</p>
-                                    <p className="text-xs opacity-80">{outcome.description}</p>
-                                </div>
-                            </div>
+                            <OutcomeEditor
+                                key={idx}
+                                outcome={outcome}
+                                onChange={(next) => setQuizData(prev => ({
+                                    ...prev,
+                                    outcomes: prev.outcomes?.map((o, i) => i === idx ? next : o),
+                                }))}
+                            />
                         ))}
                      </div>
                  </NeoCard>
@@ -355,7 +358,9 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onComplete, existingQuiz }) =
                                         className="flex-1 font-medium bg-transparent border-b border-black/20 focus:outline-none focus:border-black"
                                         placeholder="Answer text..."
                                     />
-                                    <span className="text-xs font-mono bg-gray-200 px-1 rounded flex-shrink-0">{quizData.outcomes?.find(o => o.id === a.outcomeId)?.image}</span>
+                                    <span className="bg-gray-200 border border-black p-1 rounded flex-shrink-0">
+                                        <OutcomeIcon value={quizData.outcomes?.find(o => o.id === a.outcomeId)?.image} className="w-3 h-3" />
+                                    </span>
                                 </div>
                             ))}
                         </div>
@@ -382,6 +387,64 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onComplete, existingQuiz }) =
                  </button>
             </div>
         </div>
+    </div>
+  );
+};
+
+// Inline editor for a single outcome — title, description, and a popover icon
+// picker. Each outcome gets one. Self-contained so QuizBuilder stays flat.
+interface OutcomeEditorProps {
+  outcome: Outcome;
+  onChange: (next: Outcome) => void;
+}
+
+const OutcomeEditor: React.FC<OutcomeEditorProps> = ({ outcome, onChange }) => {
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  return (
+    <div className={`p-3 border-2 border-black rounded-lg ${outcome.colorClass} space-y-2`}>
+      <div className="flex gap-2 items-start">
+        <button
+          onClick={() => setPickerOpen(o => !o)}
+          className="bg-white border-2 border-black rounded-lg p-2 flex-shrink-0 hover:bg-neo-paper transition-colors"
+          title="Change icon"
+          aria-label="Change icon"
+        >
+          <OutcomeIcon value={outcome.image} className="w-6 h-6 text-black" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <input
+            value={outcome.title}
+            onChange={e => onChange({ ...outcome, title: e.target.value })}
+            className="w-full bg-transparent font-bold text-sm leading-tight focus:outline-none border-b border-black/20 focus:border-black mb-1"
+            placeholder="Outcome title"
+          />
+          <input
+            value={outcome.description}
+            onChange={e => onChange({ ...outcome, description: e.target.value })}
+            className="w-full bg-transparent text-xs focus:outline-none border-b border-black/10 focus:border-black"
+            placeholder="Outcome description"
+          />
+        </div>
+      </div>
+      {pickerOpen && (
+        <div className="bg-white border-2 border-black rounded-lg p-2 grid grid-cols-8 gap-1">
+          {OUTCOME_ICONS.map(icon => {
+            const active = icon.name === outcome.image;
+            return (
+              <button
+                key={icon.name}
+                onClick={() => { onChange({ ...outcome, image: icon.name }); setPickerOpen(false); }}
+                className={`p-1.5 rounded border-2 ${active ? 'border-black bg-neo-lemon' : 'border-transparent hover:border-black hover:bg-neo-paper'}`}
+                title={icon.label}
+                aria-label={icon.label}
+              >
+                <icon.Component className="w-4 h-4 text-black" strokeWidth={2.5} />
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

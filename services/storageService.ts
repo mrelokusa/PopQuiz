@@ -218,6 +218,50 @@ export const getQuizOutcomeStats = async (quizId: string): Promise<Record<string
     }
 }
 
+// Recent takers for a single quiz, used as social proof on the result screen.
+// Visible to anyone who can read the quiz (RLS: see migration 0003).
+export const getRecentResultsForQuiz = async (
+  quizId: string,
+  limit = 8
+): Promise<QuizResult[]> => {
+  try {
+    const { data, error } = await supabase
+      .from(TABLE_RESULTS)
+      .select(`
+        id, quiz_id, user_id, outcome_id, created_at,
+        PopQuiz_Profiles ( username, avatar_text )
+      `)
+      .eq('quiz_id', quizId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error || !data) return [];
+
+    // We need the outcome title + image — fetch the parent quiz once.
+    const quiz = await getQuizById(quizId);
+    const outcomes = quiz?.outcomes ?? [];
+
+    return data.map((r: any) => {
+      const outcome = outcomes.find((o: any) => o.id === r.outcome_id);
+      const taker = r.PopQuiz_Profiles;
+      return {
+        id: r.id,
+        quiz_id: r.quiz_id,
+        user_id: r.user_id,
+        outcome_id: r.outcome_id,
+        created_at: parseCreatedAt(r.created_at),
+        outcome_title: outcome?.title || 'Unknown',
+        outcome_image: outcome?.image || '?',
+        taker_username: taker?.username || 'Anonymous',
+        taker_avatar: taker?.avatar_text || '?',
+      };
+    });
+  } catch (e) {
+    console.error('Recent results error', e);
+    return [];
+  }
+};
+
 // Get results for quizzes I created (to see what friends got)
 export const getMyQuizActivity = async (myUserId: string): Promise<QuizResult[]> => {
     try {
@@ -255,7 +299,7 @@ export const getMyQuizActivity = async (myUserId: string): Promise<QuizResult[]>
                 created_at: parseCreatedAt(r.created_at),
                 quiz_title: quiz.title,
                 outcome_title: outcome?.title || 'Unknown',
-                outcome_image: outcome?.image || '❓',
+                outcome_image: outcome?.image || '?',
                 taker_username: taker?.username || 'Anonymous'
             };
         });
