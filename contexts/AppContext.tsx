@@ -215,7 +215,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       if (cancelled) return;
       const user = session?.user || null;
       setUser(user);
-      if (user) await ensureUserProfile(user);
+      if (user) {
+        try {
+          await ensureUserProfile(user);
+        } catch (e: any) {
+          // The listener must keep working — but log loudly so account
+          // creation issues are visible in the console rather than silent.
+          console.error('Auth listener: profile ensure failed', e?.message || e);
+        }
+      }
       if (event === 'PASSWORD_RECOVERY') {
         setView(AppState.RESET_PASSWORD);
       }

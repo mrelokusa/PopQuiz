@@ -64,15 +64,34 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onCancel }) => {
 
         if (authError) throw authError;
 
-        // CRITICAL FIX: Only attempt to create profile if we have an active session.
-        // If email confirmation is enabled, session will be null here.
+        // Only attempt to create the profile when we have an active session.
+        // With email confirmation on, session is null until the user clicks
+        // the link — at that point ensureUserProfile in AppContext picks it up.
         if (data.session && data.user) {
           const finalUsername = username || 'New User';
-          await createProfile(data.user.id, finalUsername, avatarTextFromUsername(finalUsername));
+          try {
+            const result = await createProfile(
+              data.user.id,
+              finalUsername,
+              avatarTextFromUsername(finalUsername)
+            );
+            // If we had to suffix the username (collision), let the user know.
+            if (result.username !== finalUsername) {
+              setMessage(`Username taken — your handle is now ${result.username}.`);
+            }
+          } catch (profileErr: any) {
+            // Profile creation failed. Tell the user; they can sign in
+            // later and ensureUserProfile will retry.
+            setError(profileErr?.message || 'Could not create your profile. Please try logging in.');
+            return;
+          }
           onAuthSuccess();
         } else if (data.user && !data.session) {
-           setMessage("Account created! Please check your email to confirm before logging in.");
-           setMode('login');
+          setMessage("Account created! Please check your email to confirm before logging in.");
+          setMode('login');
+        } else {
+          // No user, no session, no error from supabase. Defensive — shouldn't happen.
+          setError('Sign-up did not complete. Please try again.');
         }
       } else {
         // Sign In Flow
