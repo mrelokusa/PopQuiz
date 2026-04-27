@@ -10,14 +10,37 @@ interface AuthScreenProps {
   onCancel?: () => void;
 }
 
+type Mode = 'login' | 'signup' | 'forgot';
+
 const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onCancel }) => {
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+
+  const isSignUp = mode === 'signup';
+  const isForgot = mode === 'forgot';
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setMessage('');
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/?reset=1`,
+      });
+      if (resetError) throw resetError;
+      setMessage('Check your email for a password reset link.');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +72,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onCancel }) => {
           onAuthSuccess();
         } else if (data.user && !data.session) {
            setMessage("Account created! Please check your email to confirm before logging in.");
-           setIsSignUp(false); // Switch to login view
+           setMode('login');
         }
       } else {
         // Sign In Flow
@@ -87,10 +110,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onCancel }) => {
                 <User className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-4xl font-serif font-black italic mb-2">
-                {isSignUp ? 'Join the Club' : 'Welcome Back'}
+                {isForgot ? 'Reset Password' : isSignUp ? 'Join the Club' : 'Welcome Back'}
             </h1>
             <p className="font-bold text-gray-500 uppercase tracking-widest text-xs">
-                {isSignUp ? 'Create your identity' : 'Login to your world'}
+                {isForgot ? "We'll email you a reset link" : isSignUp ? 'Create your identity' : 'Login to your world'}
             </p>
         </div>
 
@@ -98,13 +121,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onCancel }) => {
             {/* Decoration */}
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-neo-lemon rounded-full border-2 border-black z-0"></div>
 
-            <form onSubmit={handleAuth} className="relative z-10 space-y-4">
+            <form onSubmit={isForgot ? handleForgotPassword : handleAuth} className="relative z-10 space-y-4">
                 {isSignUp && (
                     <div>
                         <label className="font-black text-xs uppercase mb-1 block">Username</label>
-                        <input 
-                            type="text" 
-                            required 
+                        <input
+                            type="text"
+                            required
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             className="w-full border-2 border-black rounded-xl p-3 font-bold focus:outline-none focus:ring-4 ring-neo-lemon transition-all"
@@ -112,12 +135,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onCancel }) => {
                         />
                     </div>
                 )}
-                
+
                 <div>
                     <label className="font-black text-xs uppercase mb-1 block">Email</label>
-                    <input 
-                        type="email" 
-                        required 
+                    <input
+                        type="email"
+                        required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="w-full border-2 border-black rounded-xl p-3 font-bold focus:outline-none focus:ring-4 ring-neo-lemon transition-all"
@@ -125,17 +148,19 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onCancel }) => {
                     />
                 </div>
 
-                <div>
-                    <label className="font-black text-xs uppercase mb-1 block">Password</label>
-                    <input 
-                        type="password" 
-                        required 
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full border-2 border-black rounded-xl p-3 font-bold focus:outline-none focus:ring-4 ring-neo-lemon transition-all"
-                        placeholder="••••••••"
-                    />
-                </div>
+                {!isForgot && (
+                    <div>
+                        <label className="font-black text-xs uppercase mb-1 block">Password</label>
+                        <input
+                            type="password"
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full border-2 border-black rounded-xl p-3 font-bold focus:outline-none focus:ring-4 ring-neo-lemon transition-all"
+                            placeholder="••••••••"
+                        />
+                    </div>
+                )}
 
                 {error && (
                     <div className="bg-red-100 border-2 border-black p-2 rounded-lg text-xs font-bold text-red-600">
@@ -149,29 +174,49 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onCancel }) => {
                     </div>
                 )}
 
-                <NeoButton 
+                <NeoButton
                     type="submit"
-                    className="w-full mt-4" 
+                    className="w-full mt-4"
                     colorClass={isSignUp ? "bg-neo-mint" : "bg-neo-periwinkle text-white"}
                     icon={isSignUp ? Sparkles : ArrowRight}
-                    label={loading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Enter')}
+                    label={loading ? 'Processing...' : (isForgot ? 'Send Reset Link' : isSignUp ? 'Create Account' : 'Enter')}
                     disabled={loading}
                 />
+
+                {!isSignUp && !isForgot && (
+                    <button
+                        type="button"
+                        onClick={() => { setMode('forgot'); setError(''); setMessage(''); }}
+                        className="w-full text-xs font-bold text-gray-500 hover:text-neo-periwinkle underline decoration-dotted"
+                    >
+                        Forgot password?
+                    </button>
+                )}
             </form>
         </NeoCard>
 
         <div className="text-center">
-            <button 
-                type="button"
-                onClick={() => {
-                    setIsSignUp(!isSignUp);
-                    setError('');
-                    setMessage('');
-                }}
-                className="font-bold underline decoration-2 decoration-neo-coral hover:text-neo-periwinkle transition-colors"
-            >
-                {isSignUp ? "Already have an account? Log In" : "Need an account? Sign Up"}
-            </button>
+            {isForgot ? (
+                <button
+                    type="button"
+                    onClick={() => { setMode('login'); setError(''); setMessage(''); }}
+                    className="font-bold underline decoration-2 decoration-neo-coral hover:text-neo-periwinkle transition-colors"
+                >
+                    Back to Log In
+                </button>
+            ) : (
+                <button
+                    type="button"
+                    onClick={() => {
+                        setMode(isSignUp ? 'login' : 'signup');
+                        setError('');
+                        setMessage('');
+                    }}
+                    className="font-bold underline decoration-2 decoration-neo-coral hover:text-neo-periwinkle transition-colors"
+                >
+                    {isSignUp ? "Already have an account? Log In" : "Need an account? Sign Up"}
+                </button>
+            )}
         </div>
       </div>
     </div>

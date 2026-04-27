@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Quiz, QuizResult, QuizVisibility, AppState } from '../../types';
-import { getQuizzes, getMyQuizActivity } from '../../services/storageService';
+import { getQuizzes, getMyQuizActivity, deleteQuiz } from '../../services/storageService';
+import { deleteMyAccount, exportMyData } from '../../services/accountService';
+import { supabase } from '../../lib/supabaseClient';
 import NeoCard from '../ui/NeoCard';
+import NeoButton from '../ui/NeoButton';
 import { useToast } from '../../contexts/ToastContext';
 import { useApp } from '../../contexts/AppContext';
-import { Sparkles, Activity, Crown, TrendingUp, Zap, Users, Globe, Lock, Link, Share2 } from 'lucide-react';
+import { Sparkles, Activity, Crown, TrendingUp, Zap, Users, Globe, Lock, Link, Share2, Download, Trash2, Pencil } from 'lucide-react';
 
 const VisibilityBadge: React.FC<{ visibility?: QuizVisibility }> = ({ visibility }) => {
   const config = {
@@ -27,10 +30,51 @@ interface SocialHubProps {
 
 const SocialHub: React.FC<SocialHubProps> = ({ userId }) => {
   const { addToast } = useToast();
-  const { setActiveQuiz, setView } = useApp();
+  const { setActiveQuiz, setEditingQuiz, setView, logout } = useApp();
   const [myQuizzes, setMyQuizzes] = useState<Quiz[]>([]);
   const [activity, setActivity] = useState<QuizResult[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [pendingQuizDelete, setPendingQuizDelete] = useState<string | null>(null);
+
+  const handleEdit = (quiz: Quiz) => {
+    setEditingQuiz(quiz);
+    setView(AppState.CREATE);
+  };
+
+  const handleDeleteQuiz = async (quiz: Quiz) => {
+    const ok = await deleteQuiz(quiz.id);
+    if (ok) {
+      setMyQuizzes(prev => prev.filter(q => q.id !== quiz.id));
+      addToast('Quiz deleted.', 'success');
+    } else {
+      addToast('Failed to delete quiz.', 'error');
+    }
+    setPendingQuizDelete(null);
+  };
+
+  const handleExport = async () => {
+    try {
+      await exportMyData();
+      addToast('Your data has been downloaded.', 'success');
+    } catch (e: any) {
+      addToast(e.message || 'Export failed.', 'error');
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteMyAccount();
+      addToast('Your account has been deleted.', 'success');
+      // signOut already called inside deleteMyAccount; reset UI state.
+      await logout();
+    } catch (e: any) {
+      addToast(e.message || 'Account deletion failed. Please contact support.', 'error');
+      setDeleting(false);
+    }
+  };
 
   const handleShare = async (quiz: Quiz) => {
     const url = `${window.location.origin}?quiz=${quiz.id}`;
@@ -54,6 +98,26 @@ const SocialHub: React.FC<SocialHubProps> = ({ userId }) => {
         setLoading(false);
     };
     loadData();
+
+    // Subscribe to new results so Friend Results updates live without a refresh.
+    // RLS on the table only lets us see results for our own quizzes, but that
+    // filter is applied per-row at query time — postgres replication pushes
+    // every event, so we re-fetch (small + simple) instead of trying to filter.
+    const channel = supabase
+      .channel(`results:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'PopQuiz_Results' },
+        async () => {
+          const fresh = await getMyQuizActivity(userId);
+          setActivity(fresh);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [userId]);
 
   // --- Stats Calculation ---
@@ -143,8 +207,8 @@ const SocialHub: React.FC<SocialHubProps> = ({ userId }) => {
                                         </p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="flex -space-x-2 opacity-50 grayscale group-hover:grayscale-0 transition-all">
+                                <div className="flex items-center gap-1.5">
+                                    <div className="hidden sm:flex -space-x-2 opacity-50 grayscale group-hover:grayscale-0 transition-all mr-1">
                                         {quiz.outcomes.slice(0,3).map((o, i) => (
                                             <div key={i} className={`w-8 h-8 rounded-full border-2 border-black ${o.colorClass} flex items-center justify-center text-xs`}>{o.image}</div>
                                         ))}
@@ -156,6 +220,30 @@ const SocialHub: React.FC<SocialHubProps> = ({ userId }) => {
                                     >
                                         <Share2 className="w-3.5 h-3.5" />
                                     </button>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleEdit(quiz); }}
+                                        className="w-8 h-8 rounded-full border-2 border-black bg-white hover:bg-neo-mint flex items-center justify-center transition-colors flex-shrink-0"
+                                        title="Edit quiz"
+                                    >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                    </button>
+                                    {pendingQuizDelete === quiz.id ? (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteQuiz(quiz); }}
+                                            className="px-2 h-8 rounded-full border-2 border-black bg-red-600 text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center flex-shrink-0"
+                                            title="Confirm delete"
+                                        >
+                                            Confirm
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setPendingQuizDelete(quiz.id); }}
+                                            className="w-8 h-8 rounded-full border-2 border-black bg-white hover:bg-neo-coral hover:text-white flex items-center justify-center transition-colors flex-shrink-0"
+                                            title="Delete quiz"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
                                 </div>
                              </NeoCard>
                         </div>
@@ -193,6 +281,47 @@ const SocialHub: React.FC<SocialHubProps> = ({ userId }) => {
                     )}
                 </div>
             </div>
+        </div>
+
+        {/* Account panel */}
+        <div className="pt-4">
+            <div className="flex items-center gap-2 mb-2">
+                <h3 className="font-black uppercase tracking-widest text-sm bg-white px-2 py-1 border border-black transform -rotate-1">Account</h3>
+            </div>
+            <NeoCard className="p-4 bg-white space-y-3" noShadow>
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <NeoButton
+                        onClick={handleExport}
+                        colorClass="bg-white"
+                        variant="secondary"
+                        icon={Download}
+                        label="Export My Data"
+                        className="flex-1"
+                    />
+                    {!confirmDelete ? (
+                        <NeoButton
+                            onClick={() => setConfirmDelete(true)}
+                            colorClass="bg-neo-coral text-white"
+                            icon={Trash2}
+                            label="Delete Account"
+                            className="flex-1"
+                        />
+                    ) : (
+                        <NeoButton
+                            onClick={handleDelete}
+                            colorClass="bg-red-600 text-white"
+                            icon={Trash2}
+                            label={deleting ? 'Deleting…' : 'Confirm — this is permanent'}
+                            disabled={deleting}
+                            className="flex-1"
+                        />
+                    )}
+                </div>
+                <p className="text-xs text-gray-500">
+                    Export gives you a JSON dump of your profile, quizzes, and results.
+                    Delete removes your account and all associated data immediately and cannot be undone.
+                </p>
+            </NeoCard>
         </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { AppState, Quiz, AuthUser, LoadingState } from '../types';
 import { getCurrentUser, ensureUserProfile, signOut } from '../services/authService';
-import { getQuizzes, getQuizById } from '../services/storageService';
+import { getQuizzes, getQuizById, PAGE_SIZE } from '../services/storageService';
 import { supabase } from '../lib/supabaseClient';
 
 // App state interface
@@ -9,8 +9,11 @@ interface AppStateData {
   user: AuthUser | null;
   view: AppState;
   activeQuiz: Quiz | null;
+  editingQuiz: Quiz | null;
   quizzes: Quiz[];
+  hasMoreQuizzes: boolean;
   loading: LoadingState;
+  loadingMore: boolean;
   quizError: string | null;
 }
 
@@ -19,8 +22,11 @@ type AppAction =
   | { type: 'SET_USER'; payload: AuthUser | null }
   | { type: 'SET_VIEW'; payload: AppState }
   | { type: 'SET_ACTIVE_QUIZ'; payload: Quiz | null }
-  | { type: 'SET_QUIZZES'; payload: Quiz[] }
+  | { type: 'SET_EDITING_QUIZ'; payload: Quiz | null }
+  | { type: 'SET_QUIZZES'; payload: { items: Quiz[]; hasMore: boolean } }
+  | { type: 'APPEND_QUIZZES'; payload: { items: Quiz[]; hasMore: boolean } }
   | { type: 'SET_LOADING'; payload: LoadingState }
+  | { type: 'SET_LOADING_MORE'; payload: boolean }
   | { type: 'SET_QUIZ_ERROR'; payload: string | null }
   | { type: 'ADD_QUIZ'; payload: Quiz }
   | { type: 'UPDATE_QUIZ'; payload: { id: string; updates: Partial<Quiz> } }
@@ -31,8 +37,11 @@ const initialState: AppStateData = {
   user: null,
   view: AppState.LANDING,
   activeQuiz: null,
+  editingQuiz: null,
   quizzes: [],
+  hasMoreQuizzes: false,
   loading: { isLoading: false },
+  loadingMore: false,
   quizError: null
 };
 
@@ -45,10 +54,20 @@ const appReducer = (state: AppStateData, action: AppAction): AppStateData => {
       return { ...state, view: action.payload };
     case 'SET_ACTIVE_QUIZ':
       return { ...state, activeQuiz: action.payload };
+    case 'SET_EDITING_QUIZ':
+      return { ...state, editingQuiz: action.payload };
     case 'SET_QUIZZES':
-      return { ...state, quizzes: action.payload };
+      return { ...state, quizzes: action.payload.items, hasMoreQuizzes: action.payload.hasMore };
+    case 'APPEND_QUIZZES':
+      return {
+        ...state,
+        quizzes: [...state.quizzes, ...action.payload.items],
+        hasMoreQuizzes: action.payload.hasMore,
+      };
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
+    case 'SET_LOADING_MORE':
+      return { ...state, loadingMore: action.payload };
     case 'SET_QUIZ_ERROR':
       return { ...state, quizError: action.payload };
     case 'ADD_QUIZ':
@@ -76,8 +95,10 @@ interface AppContextType extends AppStateData {
   setUser: (user: AuthUser | null) => void;
   setView: (view: AppState) => void;
   setActiveQuiz: (quiz: Quiz | null) => void;
+  setEditingQuiz: (quiz: Quiz | null) => void;
   setLoading: (loading: LoadingState) => void;
   fetchQuizzes: (scope: 'global' | 'local') => Promise<void>;
+  loadMoreQuizzes: (scope: 'global' | 'local') => Promise<void>;
   logout: () => Promise<void>;
   quizError: string | null;
 }
@@ -96,22 +117,47 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const setUser = (user: AuthUser | null) => dispatch({ type: 'SET_USER', payload: user });
   const setView = (view: AppState) => dispatch({ type: 'SET_VIEW', payload: view });
   const setActiveQuiz = (quiz: Quiz | null) => dispatch({ type: 'SET_ACTIVE_QUIZ', payload: quiz });
+  const setEditingQuiz = (quiz: Quiz | null) => dispatch({ type: 'SET_EDITING_QUIZ', payload: quiz });
   const setLoading = (loading: LoadingState) => dispatch({ type: 'SET_LOADING', payload: loading });
 
-  // Fetch quizzes
+  // Fetch first page of quizzes
   const fetchQuizzes = async (scope: 'global' | 'local') => {
     setLoading({ isLoading: true, message: 'Loading quizzes...' });
     dispatch({ type: 'SET_QUIZ_ERROR', payload: null });
     try {
       const userId = scope === 'local' ? state.user?.id : undefined;
-      const quizzes = await getQuizzes(scope, userId);
-      dispatch({ type: 'SET_QUIZZES', payload: quizzes });
+      const quizzes = await getQuizzes(scope, userId, { offset: 0, limit: PAGE_SIZE });
+      dispatch({
+        type: 'SET_QUIZZES',
+        payload: { items: quizzes, hasMore: quizzes.length === PAGE_SIZE },
+      });
     } catch (error: any) {
       console.error('Failed to fetch quizzes:', error);
       dispatch({ type: 'SET_QUIZ_ERROR', payload: error?.message || 'Failed to load quizzes' });
-      dispatch({ type: 'SET_QUIZZES', payload: [] });
+      dispatch({ type: 'SET_QUIZZES', payload: { items: [], hasMore: false } });
     } finally {
       setLoading({ isLoading: false });
+    }
+  };
+
+  // Append the next page
+  const loadMoreQuizzes = async (scope: 'global' | 'local') => {
+    if (state.loadingMore || !state.hasMoreQuizzes) return;
+    dispatch({ type: 'SET_LOADING_MORE', payload: true });
+    try {
+      const userId = scope === 'local' ? state.user?.id : undefined;
+      const next = await getQuizzes(scope, userId, {
+        offset: state.quizzes.length,
+        limit: PAGE_SIZE,
+      });
+      dispatch({
+        type: 'APPEND_QUIZZES',
+        payload: { items: next, hasMore: next.length === PAGE_SIZE },
+      });
+    } catch (error: any) {
+      console.error('Failed to load more quizzes:', error);
+    } finally {
+      dispatch({ type: 'SET_LOADING_MORE', payload: false });
     }
   };
 
@@ -163,12 +209,16 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
     initializeApp();
 
-    // Auth listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // Auth listener — also catches PASSWORD_RECOVERY when the user clicks
+    // the email link Supabase sends from resetPasswordForEmail.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (cancelled) return;
       const user = session?.user || null;
       setUser(user);
       if (user) await ensureUserProfile(user);
+      if (event === 'PASSWORD_RECOVERY') {
+        setView(AppState.RESET_PASSWORD);
+      }
     });
 
     return () => {
@@ -177,13 +227,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     };
   }, []);
 
-  // Fetch quizzes when view changes to landing or local
+  // Fetch quizzes when view changes to landing or local. fetchQuizzes is
+  // intentionally omitted: it's recreated on every render (closes over
+  // `state`), so adding it would re-run this effect every time anything in
+  // state changed, including the very fetch we just dispatched.
   useEffect(() => {
     if (state.view === AppState.LANDING) {
       fetchQuizzes('global');
     } else if (state.view === AppState.LOCAL && state.user) {
       fetchQuizzes('local');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.view, state.user?.id]);
 
   const contextValue: AppContextType = {
@@ -192,8 +246,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setUser,
     setView,
     setActiveQuiz,
+    setEditingQuiz,
     setLoading,
     fetchQuizzes,
+    loadMoreQuizzes,
     logout
   };
 

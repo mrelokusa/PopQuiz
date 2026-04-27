@@ -2,7 +2,6 @@ import { Quiz, QuizResult } from "../types";
 import { supabase } from "../lib/supabaseClient";
 import { getCurrentUser } from "./authService";
 import { MOCK_QUIZ } from "../constants";
-import { SEED_DATA } from "../data/seedData";
 
 const TABLE_QUIZZES = 'PopQuiz_Quizzes';
 const TABLE_RESULTS = 'PopQuiz_Results';
@@ -21,18 +20,26 @@ const parseCreatedAt = (val: any): number => {
 
 // --- Quizzes ---
 
-export const getQuizzes = async (scope: 'global' | 'local', userId?: string): Promise<Quiz[]> => {
+export const PAGE_SIZE = 12;
+
+export const getQuizzes = async (
+  scope: 'global' | 'local',
+  userId?: string,
+  options?: { offset?: number; limit?: number }
+): Promise<Quiz[]> => {
   try {
+    const limit = options?.limit ?? PAGE_SIZE;
+    const offset = options?.offset ?? 0;
+
     let query = supabase
       .from(TABLE_QUIZZES)
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
-    // If Local scope, only show quizzes created by the user (including private ones)
     if (scope === 'local' && userId) {
       query = query.eq('user_id', userId);
     } else {
-      // Global scope: only show public quizzes
       query = query.eq('visibility', 'public');
     }
 
@@ -104,6 +111,45 @@ export const saveQuiz = async (quiz: Quiz): Promise<boolean> => {
   }
 };
 
+export const updateQuiz = async (quiz: Quiz): Promise<boolean> => {
+  try {
+    // Mirrors the strict payload from saveQuiz. RLS guarantees only the
+    // owner can update, so we don't need to check user_id here.
+    const payload = {
+      title: quiz.title,
+      description: quiz.description,
+      questions: quiz.questions,
+      outcomes: quiz.outcomes,
+      visibility: quiz.visibility || 'public',
+    };
+
+    const { error } = await supabase
+      .from(TABLE_QUIZZES)
+      .update(payload)
+      .eq('id', quiz.id);
+
+    if (error) throw error;
+    return true;
+  } catch (e: any) {
+    console.error('Update error:', e);
+    return false;
+  }
+};
+
+export const deleteQuiz = async (quizId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from(TABLE_QUIZZES)
+      .delete()
+      .eq('id', quizId);
+    if (error) throw error;
+    return true;
+  } catch (e: any) {
+    console.error('Delete error:', e);
+    return false;
+  }
+};
+
 export const getQuizById = async (id: string): Promise<Quiz | undefined> => {
   try {
     if (id === MOCK_QUIZ.id) return MOCK_QUIZ;
@@ -128,7 +174,7 @@ export const getQuizById = async (id: string): Promise<Quiz | undefined> => {
     }
 
     return quiz;
-  } catch (e) {
+  } catch {
     return undefined;
   }
 };
@@ -141,14 +187,11 @@ export const saveResult = async (quizId: string, outcomeId: string, userId?: str
             quiz_id: quizId,
             outcome_id: outcomeId,
             user_id: userId || null
-            // We let DB handle created_at default here, likely now() or current timestamp
         }]);
-        
-        // Increment play count
-        const { data } = await supabase.from(TABLE_QUIZZES).select('plays').eq('id', quizId).single();
-        if (data) {
-            await supabase.from(TABLE_QUIZZES).update({ plays: data.plays + 1 }).eq('id', quizId);
-        }
+
+        // Atomic + RLS-safe. The RPC runs as security definer so non-owners
+        // can still bump the play count without owning the quiz row.
+        await supabase.rpc('increment_quiz_plays', { quiz_id_in: quizId });
 
     } catch(e) {
         console.error("Error saving result", e);
@@ -223,35 +266,5 @@ export const getMyQuizActivity = async (myUserId: string): Promise<QuizResult[]>
     }
 }
 
-// --- Seed ---
-
-export const seedDatabase = async (): Promise<void> => {
-  try {
-    const quizzesToInsert = SEED_DATA.map(quiz => ({
-       // Explicitly map properties to avoid extra data issues in seed too
-       id: crypto.randomUUID(), // Generate new IDs for seed data
-       title: quiz.title,
-       description: quiz.description,
-       questions: quiz.questions,
-       outcomes: quiz.outcomes,
-       author: quiz.author,
-       plays: Math.floor(Math.random() * 5000) + 100,
-       created_at: Date.now() - Math.floor(Math.random() * 1000000000)
-    }));
-
-    const { error } = await supabase
-      .from(TABLE_QUIZZES)
-      .insert(quizzesToInsert);
-
-    if (error) {
-        console.error("Seed error:", error);
-        throw new Error("Seed failed: " + error.message);
-    } else {
-        console.log(`Database seeded successfully with ${quizzesToInsert.length} viral quizzes!`);
-        window.location.reload();
-    }
-  } catch (e) {
-      console.error("Seed exception", e);
-      alert("Seed failed see console");
-  }
-};
+// Seeding lives in scripts/seed.mjs and runs server-side with the service-role
+// key. It is intentionally NOT importable from the browser bundle.

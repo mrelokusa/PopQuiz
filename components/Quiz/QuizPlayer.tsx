@@ -5,7 +5,7 @@ import { getCurrentUser } from '../../services/authService';
 import { useToast } from '../../contexts/ToastContext';
 import NeoButton from '../ui/NeoButton';
 import NeoCard from '../ui/NeoCard';
-import { RefreshCw, Share2, TrendingUp, Sparkles, AlertCircle } from 'lucide-react';
+import { RefreshCw, Share2, TrendingUp, Sparkles } from 'lucide-react';
 
 interface QuizPlayerProps {
   quiz: Quiz;
@@ -111,7 +111,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onExit }) => {
       try {
           await navigator.clipboard.writeText(url);
           addToast(`Quiz link copied! Share it with friends: ${url}`, 'success');
-      } catch (error) {
+      } catch {
           // Fallback for browsers that don't support clipboard API
           try {
               // Modern fallback
@@ -132,7 +132,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onExit }) => {
               } else {
                   throw new Error('Copy command failed');
               }
-          } catch (fallbackError) {
+          } catch {
               // Final fallback - show the link in a toast
               addToast(`Share this quiz link: ${url}`, 'info', 10000);
           }

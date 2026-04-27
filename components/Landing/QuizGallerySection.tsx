@@ -1,22 +1,16 @@
 import React from 'react';
-import { RefreshCw, Database, TrendingUp, Play, Ghost, AlertTriangle } from 'lucide-react';
+import { RefreshCw, TrendingUp, Play, Ghost, AlertTriangle } from 'lucide-react';
 import NeoCard from '../ui/NeoCard';
 import NeoButton from '../ui/NeoButton';
 import { useApp } from '../../contexts/AppContext';
-import { useToast } from '../../contexts/ToastContext';
-import { seedDatabase } from '../../services/storageService';
 import { AppState } from '../../types';
 
 const QuizGallery: React.FC = () => {
-  const { quizzes, loading, quizError, fetchQuizzes, setActiveQuiz, setView } = useApp();
+  const { quizzes, loading, loadingMore, hasMoreQuizzes, quizError, fetchQuizzes, loadMoreQuizzes, setActiveQuiz, setView } = useApp();
 
   const handleStartQuiz = (quiz: any) => {
     setActiveQuiz(quiz);
     setView(AppState.PLAY);
-  };
-
-  const handleRefresh = () => {
-    fetchQuizzes('global');
   };
 
   if (loading.isLoading) {
@@ -55,12 +49,13 @@ const QuizGallery: React.FC = () => {
           <Ghost className="w-8 h-8"/>
         </div>
         <p className="font-bold text-gray-500">It's quiet in here...</p>
-        <p className="text-sm">Click the database icon above to seed demo data.</p>
+        <p className="text-sm">Be the first to publish a quiz!</p>
       </div>
     );
   }
 
   return (
+    <>
     <div className="grid md:grid-cols-2 gap-4">
       {quizzes.map(quiz => (
         <article 
@@ -118,6 +113,19 @@ const QuizGallery: React.FC = () => {
         </article>
       ))}
     </div>
+
+    {hasMoreQuizzes && (
+      <div className="text-center pt-6">
+        <NeoButton
+          onClick={() => loadMoreQuizzes('global')}
+          disabled={loadingMore}
+          colorClass="bg-white"
+          variant="secondary"
+          label={loadingMore ? 'Loading…' : 'Load More'}
+        />
+      </div>
+    )}
+    </>
   );
 };
 
@@ -135,30 +143,6 @@ const RefreshButton: React.FC = () => {
   );
 };
 
-const SeedButton: React.FC = () => {
-  const { addToast } = useToast();
-
-  const handleSeed = async () => {
-    try {
-      await seedDatabase();
-      addToast("Database seeded successfully with demo quizzes!", 'success');
-    } catch (error: any) {
-      addToast(error.message || "Failed to seed database", 'error');
-    }
-  };
-
-  return (
-    <button
-      onClick={handleSeed}
-      className="p-1 hover:bg-black hover:text-white rounded transition-colors"
-      title="Seed Demo Data"
-      aria-label="Seed demo data"
-    >
-      <Database className="w-4 h-4"/>
-    </button>
-  );
-};
-
 const QuizGallerySection: React.FC = () => {
   return (
     <section className="pt-8">
@@ -168,7 +152,6 @@ const QuizGallerySection: React.FC = () => {
         </h2>
         <div className="flex gap-2">
           <RefreshButton />
-          <SeedButton />
         </div>
       </header>
 

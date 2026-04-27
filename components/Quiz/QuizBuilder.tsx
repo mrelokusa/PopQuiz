@@ -1,54 +1,70 @@
 import React, { useState } from 'react';
-import { Sparkles, Plus, Trash, ArrowRight, Save, Check, AlertTriangle, X, Globe, Lock, Link } from 'lucide-react';
+import { Sparkles, Plus, Trash, Save, Globe, Lock, Link } from 'lucide-react';
 import NeoCard from '../ui/NeoCard';
 import NeoButton from '../ui/NeoButton';
-import { Quiz, Question, Outcome, QuizVisibility } from '../../types';
-import { generateAIQuiz } from '../../services/geminiService';
-import { saveQuiz } from '../../services/storageService';
+import { Quiz, Outcome, QuizVisibility } from '../../types';
+import { generateAIQuiz, GenerateQuizException } from '../../services/geminiService';
+import { saveQuiz, updateQuiz } from '../../services/storageService';
 import { getCurrentUser } from '../../services/authService';
 import { useToast } from '../../contexts/ToastContext';
 
 interface QuizBuilderProps {
   onComplete: () => void;
+  existingQuiz?: Quiz | null;
 }
 
-const QuizBuilder: React.FC<QuizBuilderProps> = ({ onComplete }) => {
+const QuizBuilder: React.FC<QuizBuilderProps> = ({ onComplete, existingQuiz }) => {
   const { addToast } = useToast();
+  const isEditing = !!existingQuiz;
   const [topic, setTopic] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [step, setStep] = useState<'topic' | 'edit'>('topic');
-  const [showApiError, setShowApiError] = useState(false);
-  
-  const [quizData, setQuizData] = useState<Partial<Quiz>>({
-    title: '',
-    description: '',
-    questions: [],
-    outcomes: [],
-    visibility: QuizVisibility.PUBLIC
-  });
+  const [step, setStep] = useState<'topic' | 'edit'>(isEditing ? 'edit' : 'topic');
+
+  const [quizData, setQuizData] = useState<Partial<Quiz>>(
+    existingQuiz ?? {
+      title: '',
+      description: '',
+      questions: [],
+      outcomes: [],
+      visibility: QuizVisibility.PUBLIC,
+    }
+  );
 
   const handleGenerate = async () => {
     if (!topic) return;
     setLoading(true);
-    setShowApiError(false);
-    
+
     try {
         const generated = await generateAIQuiz(topic);
         if (generated) {
           setQuizData(generated);
           setStep('edit');
-         } else {
-            // Generic failure
-            addToast("AI Generation failed. Please try a different topic or build manually.", 'error');
-         }
+        } else {
+          addToast("AI Generation failed. Please try a different topic or build manually.", 'error');
+        }
     } catch (e: any) {
-        if (e.message === 'MISSING_API_KEY') {
-            setShowApiError(true);
-         } else {
-             console.error(e);
-             addToast("Something went wrong with the AI.", 'error');
-         }
+        if (e instanceof GenerateQuizException) {
+            switch (e.code) {
+                case 'NOT_AUTHENTICATED':
+                    addToast("Please log in to use AI generation.", 'warning');
+                    break;
+                case 'RATE_LIMITED':
+                    addToast("You've hit the hourly AI limit. Try again later or build manually.", 'warning');
+                    break;
+                case 'INVALID_TOPIC':
+                    addToast("That topic didn't work — try something shorter.", 'error');
+                    break;
+                case 'NETWORK_ERROR':
+                    addToast("Couldn't reach the server. Check your connection.", 'error');
+                    break;
+                default:
+                    addToast("Something went wrong with the AI. Try again or build manually.", 'error');
+            }
+        } else {
+            console.error(e);
+            addToast("Something went wrong with the AI.", 'error');
+        }
     } finally {
         setLoading(false);
     }
@@ -80,34 +96,44 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onComplete }) => {
       
       // CRITICAL: Ensure we have a fresh user session before saving
       const user = await getCurrentUser();
+
+      if (!user) {
+          setSaving(false);
+          addToast("Your session has expired. Please log in again to publish.", 'warning');
+          return;
+      }
+
+      // Require a verified email before allowing public content. Stops bot
+      // accounts and disposable-address spam from polluting the global feed.
+      if (!user.email_confirmed_at) {
+          setSaving(false);
+          addToast("Please confirm your email address before publishing a quiz.", 'warning');
+          return;
+      }
       
-       if (!user) {
-           setSaving(false);
-           addToast("Your session has expired. Please log in again to publish.", 'warning');
-           return;
-       }
-      
-      const newQuiz: Quiz = {
-        id: crypto.randomUUID(),
-        author: user.user_metadata?.username || user.email?.split('@')[0] || 'Anonymous',
-        user_id: user.id,
-        createdAt: Date.now(),
-        plays: 0,
+      const quizPayload: Quiz = {
+        id: existingQuiz?.id ?? crypto.randomUUID(),
+        author: existingQuiz?.author ?? (user.user_metadata?.username || user.email?.split('@')[0] || 'Anonymous'),
+        user_id: existingQuiz?.user_id ?? user.id,
+        createdAt: existingQuiz?.createdAt ?? Date.now(),
+        plays: existingQuiz?.plays ?? 0,
         visibility: quizData.visibility || QuizVisibility.PUBLIC,
         title: quizData.title,
         description: quizData.description || '',
         questions: quizData.questions,
         outcomes: quizData.outcomes
       };
-      
-      const success = await saveQuiz(newQuiz);
+
+      const success = isEditing
+        ? await updateQuiz(quizPayload)
+        : await saveQuiz(quizPayload);
       setSaving(false);
 
       if (success) {
-        addToast('Quiz published!', 'success');
+        addToast(isEditing ? 'Quiz updated!' : 'Quiz published!', 'success');
         onComplete();
       } else {
-        addToast('Failed to publish quiz. Check the console for details.', 'error');
+        addToast(isEditing ? 'Failed to update quiz.' : 'Failed to publish quiz. Check the console for details.', 'error');
       }
      } else {
         addToast("Please ensure your quiz has a title, questions, and outcomes.", 'warning');
@@ -122,8 +148,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onComplete }) => {
         <div className={`w-24 h-24 ${saving ? 'bg-neo-mint' : 'bg-neo-lemon'} border-2 border-black rounded-full animate-bounce flex items-center justify-center shadow-neo-md`}>
             <Sparkles className="w-12 h-12 animate-spin" />
         </div>
-        <h2 className="text-2xl font-serif font-black italic">{saving ? 'Publishing to the world...' : 'Cooking up your quiz...'}</h2>
-        <p className="font-mono bg-neo-black text-white px-2">{saving ? 'UPLOADING' : 'AI IS THINKING'}</p>
+        <h2 className="text-2xl font-serif font-black italic">{saving ? (isEditing ? 'Saving changes...' : 'Publishing to the world...') : 'Cooking up your quiz...'}</h2>
+        <p className="font-mono bg-neo-black text-white px-2">{saving ? (isEditing ? 'UPDATING' : 'UPLOADING') : 'AI IS THINKING'}</p>
       </div>
     );
   }
@@ -131,43 +157,12 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onComplete }) => {
   if (step === 'topic') {
     return (
       <div className="max-w-md mx-auto space-y-6 animate-in zoom-in-95 relative">
-        
-        {/* Error Modal Overlay */}
-        {showApiError && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center">
-                <div className="bg-red-100 border-4 border-black rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-w-sm w-full animate-in zoom-in duration-200">
-                    <div className="flex justify-between items-start mb-4">
-                         <div className="bg-red-500 text-white p-2 rounded-lg border-2 border-black">
-                             <AlertTriangle className="w-6 h-6" />
-                         </div>
-                         <button onClick={() => setShowApiError(false)} className="hover:bg-black hover:text-white rounded p-1 transition-colors">
-                             <X className="w-6 h-6" />
-                         </button>
-                    </div>
-                    <h3 className="font-black font-serif italic text-2xl mb-2">Whoops! No Key.</h3>
-                    <p className="font-bold text-sm mb-4">
-                        We couldn't find your Gemini API Key. Vercel is strict about variable names.
-                    </p>
-                    <div className="bg-white p-3 rounded-lg border-2 border-black mb-4">
-                        <p className="text-xs font-mono text-gray-500 mb-1">Go to Vercel Settings → Environment Variables</p>
-                        <p className="text-xs font-black uppercase text-red-500">Name It Exactly:</p>
-                        <code className="block bg-black text-white p-2 rounded mt-1 font-mono text-sm">VITE_API_KEY</code>
-                    </div>
-                    <NeoButton 
-                        onClick={() => setShowApiError(false)}
-                        className="w-full"
-                        label="Got it, I'll fix it!"
-                    />
-                </div>
-            </div>
-        )}
-
-        <div className={`text-center space-y-2 ${showApiError ? 'blur-sm pointer-events-none' : ''}`}>
+        <div className="text-center space-y-2">
             <h2 className="text-4xl font-serif font-black italic">Let's make something viral.</h2>
             <p className="font-sans font-bold text-gray-500">Create a quiz in seconds.</p>
         </div>
 
-        <NeoCard className={`p-6 space-y-4 shadow-neo-lg ${showApiError ? 'blur-sm pointer-events-none' : ''}`}>
+        <NeoCard className="p-6 space-y-4 shadow-neo-lg">
           <div>
             <label className="font-black uppercase text-xs mb-2 block">Quiz Topic</label>
             <input 
@@ -209,8 +204,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onComplete }) => {
   return (
     <div className="space-y-6 animate-in fade-in">
         <div className="flex justify-between items-center">
-             <h2 className="text-2xl font-black font-serif italic">Editing: {quizData.title}</h2>
-             <NeoButton onClick={handleSave} colorClass="bg-neo-mint" icon={Save} label="Publish" />
+             <h2 className="text-2xl font-black font-serif italic">{isEditing ? 'Editing' : 'Building'}: {quizData.title}</h2>
+             <NeoButton onClick={handleSave} colorClass="bg-neo-mint" icon={Save} label={isEditing ? 'Save Changes' : 'Publish'} />
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">

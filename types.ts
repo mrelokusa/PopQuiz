@@ -64,7 +64,10 @@ export enum AppState {
   LOCAL = 'local',     // My Hub (Created Quizzes + Friend Results)
   CREATE = 'create',
   PLAY = 'play',
-  RESULT = 'result'
+  RESULT = 'result',
+  RESET_PASSWORD = 'reset_password', // entered after clicking email recovery link
+  TERMS = 'terms',
+  PRIVACY = 'privacy',
 }
 
 // User interface from Supabase Auth

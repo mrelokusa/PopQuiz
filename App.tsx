@@ -5,6 +5,7 @@ import { AppProvider, useApp } from './contexts/AppContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import AppHeader from './components/Layout/AppHeader';
 import AppFooter from './components/Layout/AppFooter';
+import StorageNotice from './components/Layout/StorageNotice';
 import HeroSection from './components/Landing/HeroSection';
 import QuizGallerySection from './components/Landing/QuizGallerySection';
 import { QuizCardSkeleton } from './components/ui/Skeleton';
@@ -13,11 +14,20 @@ import { QuizCardSkeleton } from './components/ui/Skeleton';
 const QuizBuilder = lazy(() => import('./components/Quiz/QuizBuilder'));
 const QuizPlayer = lazy(() => import('./components/Quiz/QuizPlayer'));
 const AuthScreen = lazy(() => import('./components/Auth/AuthScreen'));
+const ResetPasswordScreen = lazy(() => import('./components/Auth/ResetPasswordScreen'));
 const SocialHub = lazy(() => import('./components/Social/SocialHub'));
+const TermsPage = lazy(() => import('./components/Legal/TermsPage'));
+const PrivacyPage = lazy(() => import('./components/Legal/PrivacyPage'));
 
 // Inner app component that uses the context
 const AppContent: React.FC = () => {
-  const { view, activeQuiz, user, setActiveQuiz, setView } = useApp();
+  const { view, activeQuiz, editingQuiz, user, setEditingQuiz, setView } = useApp();
+
+  const exitBuilder = () => {
+    const wasEditing = !!editingQuiz;
+    setEditingQuiz(null);
+    setView(wasEditing ? AppState.LOCAL : AppState.LANDING);
+  };
 
   const renderContent = () => {
     switch(view) {
@@ -30,11 +40,11 @@ const AppContent: React.FC = () => {
             />
           </Suspense>
         );
-      
+
       case AppState.CREATE:
         return (
           <Suspense fallback={<QuizCardSkeleton />}>
-            <QuizBuilder onComplete={() => setView(AppState.LANDING)} />
+            <QuizBuilder onComplete={exitBuilder} existingQuiz={editingQuiz} />
           </Suspense>
         );
       
@@ -58,6 +68,27 @@ const AppContent: React.FC = () => {
           </Suspense>
         );
 
+      case AppState.RESET_PASSWORD:
+        return (
+          <Suspense fallback={<QuizCardSkeleton />}>
+            <ResetPasswordScreen onComplete={() => setView(AppState.LANDING)} />
+          </Suspense>
+        );
+
+      case AppState.TERMS:
+        return (
+          <Suspense fallback={<QuizCardSkeleton />}>
+            <TermsPage />
+          </Suspense>
+        );
+
+      case AppState.PRIVACY:
+        return (
+          <Suspense fallback={<QuizCardSkeleton />}>
+            <PrivacyPage />
+          </Suspense>
+        );
+
       case AppState.LANDING:
       default:
         return (
@@ -78,6 +109,7 @@ const AppContent: React.FC = () => {
       </div>
       
       {view !== AppState.AUTH && <AppFooter />}
+      <StorageNotice />
     </div>
   );
 };
